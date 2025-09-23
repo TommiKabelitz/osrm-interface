@@ -43,9 +43,17 @@ void serialize_value(std::ostringstream &oss, const osrm::json::Value &v)
     {
         oss << p->value;
     }
-    else if (auto p = std::get_if<osrm::json::Boolean>(&v))
+    else if (std::get_if<osrm::json::True>(&v))
     {
-        oss << (p->value ? "true" : "false");
+        oss << "true";
+    }
+    else if (std::get_if<osrm::json::False>(&v))
+    {
+        oss << "false";
+    }
+    else if (std::get_if<osrm::json::Null>(&v))
+    {
+        oss << "null";
     }
     else if (auto p = std::get_if<osrm::json::Array>(&v))
     {
