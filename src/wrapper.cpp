@@ -15,6 +15,20 @@
 extern "C"
 {
 
+    enum GeometryType
+    {
+        GeometryType_Polyline = 0,
+        GeometryType_Polyline6 = 1,
+        GeometryType_GeoJSON = 2,
+    };
+
+    enum OverviewZoom
+    {
+        OverviewZoom_Simplified = 0,
+        OverviewZoom_Full = 1,
+        OverviewZoom_False = 2,
+    };
+
     struct OSRM_Result
     {
         int code;
@@ -125,9 +139,20 @@ extern "C"
         return {code, message};
     }
 
+    enum RouteFlags : uint8_t
+    {
+        ROUTE_ALTERNATIVES = 1 << 0,
+        ROUTE_STEPS = 1 << 1,
+        ROUTE_ANNOTATIONS = 1 << 2,
+        ROUTE_CONTINUE_STRAIGHT = 1 << 3,
+    };
+
     OSRM_Result osrm_route(void *osrm_instance,
                            const double *coordinates,
-                           size_t num_coordinates)
+                           size_t num_coordinates,
+                           enum GeometryType geometry_type,
+                           enum OverviewZoom overview_zoom,
+                           uint8_t flags)
     {
         if (!osrm_instance)
         {
@@ -146,8 +171,12 @@ extern "C"
                                           osrm::util::FloatLatitude{coordinates[i * 2 + 1]}});
         }
 
-        params.geometries = osrm::engine::api::RouteParameters::GeometriesType::Polyline;
-        params.overview = osrm::engine::api::RouteParameters::OverviewType::Full;
+        params.geometries = static_cast<osrm::engine::api::RouteParameters::GeometriesType>(geometry_type);
+        params.overview = static_cast<osrm::engine::api::RouteParameters::OverviewType>(overview_zoom);
+        params.alternatives = (flags & ROUTE_ALTERNATIVES) != 0;
+        params.steps = (flags & ROUTE_STEPS) != 0;
+        params.annotations = (flags & ROUTE_ANNOTATIONS) != 0;
+        params.continue_straight = (flags & ROUTE_CONTINUE_STRAIGHT) != 0;
 
         osrm::json::Object result;
         const auto status = osrm_ptr->Route(params, result);

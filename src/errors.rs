@@ -1,7 +1,5 @@
 use thiserror::Error;
 
-use crate::route::RouteRequestBuilderError;
-
 #[derive(Error, Debug)]
 pub enum OsrmError {
     #[error("Failed to create OSRM instance")]
@@ -24,6 +22,4 @@ pub enum OsrmError {
 pub enum GeneralOsrmError {
     #[error("OSRM error: {0}")]
     OsrmError(#[from] OsrmError),
-    #[error("Route request builder error: {0}")]
-    RouteRequestBuilderError(#[from] RouteRequestBuilderError),
 }

@@ -28,7 +28,7 @@ impl OsrmEngine {
             .sources
             .iter()
             .chain(table_request.destinations.iter())
-            .map(|p| format!("{:.6},{:.6}", p.longitude, p.latitude))
+            .map(|p| format!("{:.6},{:.6}", p.longitude(), p.latitude()))
             .join(";");
 
         let source_indices = (0..len_sources).map(|i| format!("{}", i)).join(",");
@@ -58,7 +58,7 @@ impl OsrmEngine {
         let coordinates = route_request
             .points
             .iter()
-            .map(|p| format!("{:.6},{:.6}", p.longitude, p.latitude))
+            .map(|p| format!("{:.6},{:.6}", p.longitude(), p.latitude()))
             .join(";");
 
         let url = format!(
@@ -84,7 +84,7 @@ impl OsrmEngine {
         let coordinates = trip_request
             .points
             .iter()
-            .map(|p| format!("{:.6},{:.6}", p.longitude, p.latitude))
+            .map(|p| format!("{:.6},{:.6}", p.longitude(), p.latitude()))
             .join(";");
 
         let url = format!(
@@ -102,18 +102,9 @@ impl OsrmEngine {
     }
 
     pub fn simple_route(&self, from: Point, to: Point) -> Result<SimpleRouteResponse, OsrmError> {
-        let full_request = RouteRequest {
-            points: &vec![
-                Point {
-                    latitude: from.latitude,
-                    longitude: from.longitude,
-                },
-                Point {
-                    latitude: to.latitude,
-                    longitude: to.longitude,
-                },
-            ],
-        };
+        let points = [from, to];
+        let full_request =
+            RouteRequest::new(&points).expect("Route request for simple route is empty");
         let response = self.route(&full_request)?;
 
         Ok(SimpleRouteResponse {

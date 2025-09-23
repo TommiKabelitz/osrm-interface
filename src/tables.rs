@@ -1,5 +1,4 @@
 pub(crate) use crate::point::Point;
-use derive_builder::Builder;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -20,8 +19,20 @@ pub struct TableLocationEntry {
     pub distance: f64,
 }
 
-#[derive(Debug, Builder, Clone)]
-pub struct TableRequest {
-    pub sources: Vec<Point>,
-    pub destinations: Vec<Point>,
+#[derive(Debug, Clone)]
+pub struct TableRequest<'a> {
+    pub sources: &'a [Point],
+    pub destinations: &'a [Point],
+}
+
+impl<'a> TableRequest<'a> {
+    pub fn new(sources: &'a [Point], destinations: &'a [Point]) -> Option<Self> {
+        if sources.is_empty() || destinations.is_empty() {
+            return None;
+        }
+        Some(Self {
+            sources,
+            destinations,
+        })
+    }
 }

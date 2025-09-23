@@ -5,11 +5,7 @@ use crate::route::{RouteRequest, RouteResponse, SimpleRouteResponse};
 use crate::tables::{TableRequest, TableResponse};
 use crate::trip::{TripRequest, TripResponse};
 
-#[cfg(osrm_native)]
 use crate::native::Osrm;
-
-#[cfg(any(osrm_mock, osrm_remote))]
-use crate::Osrm;
 
 pub struct OsrmEngine {
     instance: Osrm,
@@ -23,6 +19,8 @@ impl OsrmEngine {
     }
 
     pub fn table(&self, table_request: TableRequest) -> Result<TableResponse, OsrmError> {
+        // Not using is_empty because the lengths are actually needed for the index
+        // arrays below
         let len_sources = table_request.sources.len();
         let len_destinations = table_request.destinations.len();
         if len_sources == 0 || len_destinations == 0 {
@@ -34,7 +32,7 @@ impl OsrmEngine {
         let coordinates: &[(f64, f64)] = &[table_request.sources, table_request.destinations]
             .concat()
             .iter()
-            .map(|s| (s.longitude, s.latitude))
+            .map(|s| (s.longitude(), s.latitude()))
             .collect::<Vec<(f64, f64)>>()[..];
         let result = self
             .instance
@@ -46,16 +44,11 @@ impl OsrmEngine {
     pub fn route(&self, route_request: &RouteRequest) -> Result<RouteResponse, OsrmError> {
         let len = route_request.points.len();
         if len == 0 {
-            return Err(OsrmError::InvalidTableArgument);
+            return Err(OsrmError::InvalidRouteRequest);
         }
-        let coordinates: &[(f64, f64)] = &route_request
-            .points
-            .iter()
-            .map(|p| (p.longitude, p.latitude))
-            .collect::<Vec<(f64, f64)>>()[..];
         let result = self
             .instance
-            .route(coordinates)
+            .route(route_request)
             .map_err(OsrmError::FfiError)?;
         serde_json::from_str::<RouteResponse>(&result).map_err(OsrmError::JsonParse)
     }
@@ -63,12 +56,12 @@ impl OsrmEngine {
     pub fn trip(&self, trip_request: TripRequest) -> Result<TripResponse, OsrmError> {
         let len = trip_request.points.len();
         if len == 0 {
-            return Err(OsrmError::InvalidTableArgument);
+            return Err(OsrmError::InvalidTripRequest);
         }
         let coordinates: &[(f64, f64)] = &trip_request
             .points
             .iter()
-            .map(|p| (p.longitude, p.latitude))
+            .map(|p| (p.longitude(), p.latitude()))
             .collect::<Vec<(f64, f64)>>()[..];
         let result = self
             .instance
@@ -80,7 +73,7 @@ impl OsrmEngine {
     pub fn simple_route(&self, from: Point, to: Point) -> Result<SimpleRouteResponse, OsrmError> {
         let coordinates: &[(f64, f64)] = &[from, to]
             .iter()
-            .map(|p| (p.longitude, p.latitude))
+            .map(|p| (p.longitude(), p.latitude()))
             .collect::<Vec<(f64, f64)>>()[..];
         let result = self
             .instance
@@ -100,17 +93,17 @@ impl OsrmEngine {
                 .first()
                 .unwrap()
                 .legs
-                .first()
-                .unwrap()
-                .distance,
+                .iter()
+                .map(|l| l.distance)
+                .sum(),
             durations: route_response
                 .routes
                 .first()
                 .unwrap()
                 .legs
-                .first()
-                .unwrap()
-                .duration,
+                .iter()
+                .map(|l| l.duration)
+                .sum(),
         })
     }
 }
