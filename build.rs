@@ -1,52 +1,55 @@
-use std::io::Cursor;
-use std::path::{Path, PathBuf};
-
+use std::{env, path::PathBuf};
 
 fn main() {
-    let out_dir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
+    let dotenv_path = env::var("DOTENV_FILE").expect(
+        "DOTENV_FILE environment variable unset. Cannot determine mode to compile binding in",
+    );
 
-    let osrm_url = "https://github.com/Project-OSRM/osrm-backend/archive/refs/tags/v6.0.0.tar.gz";
+    dotenvy::from_filename(&dotenv_path).expect("Failed to find the .env file");
+    println!("cargo:rerun-if-changed={}", dotenv_path);
 
-    eprintln!("Downloading OSRM source from {}...", osrm_url);
+    println!("cargo::rustc-check-cfg=cfg(osrm_mock)");
+    println!("cargo::rustc-check-cfg=cfg(osrm_native)");
+    println!("cargo::rustc-check-cfg=cfg(osrm_remote)");
 
-    let mut response = reqwest::blocking::get(osrm_url).unwrap();
-    let mut buffer = Vec::new();
-    response.copy_to(&mut buffer).unwrap();
+    let mode = std::env::var("OSRM_MODE").expect("OSRM_MODE is unset, specify in the .env");
+    match mode.as_str() {
+        "native" => println!("cargo:rustc-cfg=osrm_native"),
+        "remote" => {
+            println!("cargo:rustc-cfg=osrm_remote");
+            let address = env::var("OSRM_ROUTED_ADDRESS")
+                .expect("Require OSRM_ROUTED_ADDRESS be set for OSRM_MODE=remote");
+            let port = env::var("OSRM_ROUTED_PORT")
+                .expect("Require OSRM_ROUTED_PORT be set for OSRM_MODE=remote");
+            let endpoint = format!("{}:{}", address, port);
+            println!("cargo:rustc-env=OSRM_ENDPOINT_COMPILED={}", endpoint)
+        }
+        "mock" => println!("cargo:rustc-cfg=osrm_mock"),
+        _ => println!("cargo:rustc-cfg=osrm_mock"),
+    }
 
-    eprintln!("Decompressing OSRM source...");
-    let cursor = Cursor::new(buffer);
-    let tar_gz = flate2::read::GzDecoder::new(cursor);
-    let mut archive = tar::Archive::new(tar_gz);
-    archive.unpack(&out_dir).unwrap();
-
-    let osrm_source_path = find_osrm_source(&out_dir);
-    eprintln!("OSRM source path: {}", osrm_source_path.display());
-
-    let cxx_flags = "-Wno-array-bounds -Wno-uninitialized -Wno-stringop-overflow -std=c++17 -Wno-error";
-
-    let dst = cmake::Config::new(&osrm_source_path)
-        .env("CXXFLAGS", cxx_flags)
-        .define("CMAKE_CXX_STANDARD", "17")
-        .define("CMAKE_CXX_STANDARD_REQUIRED", "ON")
-        .define("CMAKE_CXX_FLAGS_RELEASE", "-DNDEBUG")
-        .define("ENABLE_ASSERTIONS", "Off")
-        .define("ENABLE_LTO", "Off")
-        .build();
-
+    if mode != "native" {
+        return;
+    }
+    println!("cargo:warning=Compiling OSRM wrapper");
     cc::Build::new()
         .cpp(true)
         .file("src/wrapper.cpp")
-        .flag("-std=c++17")
-        .include(dst.join("include"))
-        .include(osrm_source_path.join("include"))
-        .include(osrm_source_path.join("third_party/fmt/include"))
+        .flag("-std=c++17") // Wrapper code uses C++20
+        // Expect the osrm headers to be placed in /usr/local/
+        .include("/usr/local/include")
+        .include("/usr/local/include/osrm") // Just in case includes are nested
+        .define("ENABLE_LTO", "Off")
         .define("FMT_HEADER_ONLY", None)
         .compile("osrm_wrapper");
 
-    let lib_path = dst.join("lib");
-    println!("cargo:rustc-link-search=native={}", lib_path.display());
+    // Cargo receives information about linking through print statements
+    // with metadata as follows
 
-    println!("cargo:rustc-link-lib=static=osrm_wrapper");
+    // Linking the actual OSRM library
+    println!("cargo:rustc-link-search=native=/usr/local/lib");
+
+    // Link the various osrm commands
     println!("cargo:rustc-link-lib=static=osrm");
     println!("cargo:rustc-link-lib=static=osrm_store");
     println!("cargo:rustc-link-lib=static=osrm_extract");
@@ -56,26 +59,21 @@ fn main() {
     println!("cargo:rustc-link-lib=static=osrm_customize");
     println!("cargo:rustc-link-lib=static=osrm_contract");
 
+    // // Link OSRM system deps
     println!("cargo:rustc-link-lib=dylib=boost_thread");
     println!("cargo:rustc-link-lib=dylib=boost_filesystem");
     println!("cargo:rustc-link-lib=dylib=boost_iostreams");
     println!("cargo:rustc-link-lib=dylib=tbb");
-    println!("cargo:rustc-link-lib=dylib=fmt");
     println!("cargo:rustc-link-lib=dylib=stdc++");
 
     println!("cargo:rustc-link-lib=dylib=z");
     println!("cargo:rustc-link-lib=dylib=bz2");
     println!("cargo:rustc-link-lib=dylib=expat");
 
-}
-
-fn find_osrm_source(path: &Path) -> PathBuf {
-    for entry in path.read_dir().expect("Failed to read directory") {
-        let entry = entry.expect("Failed to read directory entry");
-        let path = entry.path();
-        if path.is_dir() && path.file_name().unwrap().to_str().unwrap().starts_with("osrm-backend-") {
-            return path;
-        }
-    }
-    panic!("Could not find OSRM source directory");
+    // Link the OSRM wrapper
+    let wrapper_dir = PathBuf::from(
+        env::var("OUT_DIR").expect("Wrapper build failed to specify output directory"),
+    );
+    println!("cargo:rustc-link-search=native={}", wrapper_dir.display());
+    println!("cargo:rustc-link-lib=static=osrm_wrapper");
 }
