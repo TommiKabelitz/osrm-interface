@@ -8,9 +8,9 @@ pub struct RouteRequest<'a> {
     pub points: &'a [Point],
     pub alternatives: bool,
     pub steps: bool,
-    pub annotations: bool,
     pub geometry: GeometryType,
     pub overview: OverviewZoom,
+    pub annotations: bool,
     pub continue_straight: bool,
 }
 impl<'a> RouteRequest<'a> {

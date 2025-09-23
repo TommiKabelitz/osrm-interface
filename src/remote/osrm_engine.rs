@@ -62,10 +62,15 @@ impl OsrmEngine {
             .join(";");
 
         let url = format!(
-            "http://{}/route/v1/driving/{coordinates}?geometries=polyline&overview=full",
-            self.endpoint
+            "http://{}/route/v1/driving/{coordinates}?alternatives={}&steps={}&geometries={}&overview={}&annotations={}",
+            self.endpoint,
+            route_request.alternatives,
+            route_request.steps,
+            route_request.geometry.url_form(),
+            route_request.overview.url_form(),
+            route_request.annotations
         );
-        println!("URL: {url}");
+
         let response = ureq::get(url)
             .call()
             .map_err(|e| OsrmError::EndpointError(e.to_string()))?
@@ -88,8 +93,12 @@ impl OsrmEngine {
             .join(";");
 
         let url = format!(
-            "{}/trip/v1/driving/{coordinates}?geometries=polyline&overview=full",
-            self.endpoint
+            "{}/trip/v1/driving/{coordinates}?steps={}&geometries={}&overview={}&annotations={}",
+            self.endpoint,
+            trip_request.steps,
+            trip_request.geometry.url_form(),
+            trip_request.overview.url_form(),
+            trip_request.annotations
         );
         let response = ureq::get(url)
             .call()
