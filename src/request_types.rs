@@ -5,6 +5,15 @@ pub enum GeometryType {
     Polyline6 = 1,
     GeoJSON = 2,
 }
+impl GeometryType {
+    pub fn url_form(self) -> &'static str {
+        match self {
+            Self::GeoJSON => "geojson",
+            Self::Polyline => "polyline",
+            Self::Polyline6 => "polyline6",
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
@@ -12,4 +21,13 @@ pub enum OverviewZoom {
     Simplified = 0,
     Full = 1,
     False = 2,
+}
+impl OverviewZoom {
+    pub fn url_form(self) -> &'static str {
+        match self {
+            Self::Full => "full",
+            Self::Simplified => "simplified",
+            Self::False => "false",
+        }
+    }
 }
