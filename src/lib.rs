@@ -1,11 +1,11 @@
 pub mod algorithm;
 pub mod errors;
 pub mod point;
+pub mod request_types;
 pub mod route;
 pub mod tables;
 pub mod trip;
 pub mod waypoints;
-// src/lib.rs
 
 #[cfg(osrm_native)]
 mod native;

@@ -37,7 +37,7 @@ impl OsrmEngine {
                 .iter()
                 .map(|p| TableLocationEntry {
                     hint: "Mocked hint".to_string(),
-                    location: [p.latitude, p.longitude],
+                    location: [p.latitude(), p.longitude()],
                     name: "Mocked_name".to_string(),
                     distance: 0.0,
                 })
@@ -47,7 +47,7 @@ impl OsrmEngine {
                 .iter()
                 .map(|p| TableLocationEntry {
                     hint: "Mock hint".to_string(),
-                    location: [p.latitude, p.longitude],
+                    location: [p.latitude(), p.longitude()],
                     name: "Mock name".to_string(),
                     distance: 0.0,
                 })
@@ -88,7 +88,7 @@ impl OsrmEngine {
                 .iter()
                 .map(|p| Waypoint {
                     hint: "Mock hint".to_string(),
-                    location: [p.latitude, p.longitude],
+                    location: [p.latitude(), p.longitude()],
                     name: "Mock name".to_string(),
                     distance: 0.0,
                 })

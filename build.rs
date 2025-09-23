@@ -1,9 +1,7 @@
 use std::{env, path::PathBuf};
 
 fn main() {
-    let dotenv_path = env::var("DOTENV_FILE").expect(
-        "DOTENV_FILE environment variable unset. Cannot determine mode to compile binding in",
-    );
+    let dotenv_path = env::var("DOTENV_FILE").expect("DOTENV_FILE environment variable unset.");
 
     dotenvy::from_filename(&dotenv_path).expect("Failed to find the .env file");
     println!("cargo:rerun-if-changed={}", dotenv_path);
