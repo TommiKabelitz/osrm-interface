@@ -1,4 +1,6 @@
 mod osrm_engine;
+use crate::request_types::{GeometryType, OverviewZoom};
+use crate::route::RouteRequest;
 pub use osrm_engine::OsrmEngine;
 
 use std::ffi::{CStr, CString, c_void};
@@ -39,7 +41,11 @@ unsafe extern "C" {
         osrm_instance: *mut c_void,
         coordinates: *const f64,
         num_coordinates: usize,
+        geometry_type: GeometryType,
+        overview_zoom: OverviewZoom,
+        flags: u8,
     ) -> OsrmResult;
+
     fn osrm_free_string(s: *mut c_char);
 }
 
@@ -91,7 +97,7 @@ impl Osrm {
         let coords: Vec<f64> = route_request
             .points
             .iter()
-            .flat_map(|&p| [p.longitude(), p.latitude()])
+            .flat_map(|p| [p.longitude(), p.latitude()])
             .collect();
 
         let mut flags: u8 = 0;

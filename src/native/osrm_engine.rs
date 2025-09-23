@@ -71,14 +71,10 @@ impl OsrmEngine {
     }
 
     pub fn simple_route(&self, from: Point, to: Point) -> Result<SimpleRouteResponse, OsrmError> {
-        let coordinates: &[(f64, f64)] = &[from, to]
-            .iter()
-            .map(|p| (p.longitude(), p.latitude()))
-            .collect::<Vec<(f64, f64)>>()[..];
-        let result = self
-            .instance
-            .route(coordinates)
-            .map_err(OsrmError::FfiError)?;
+        let points = [from, to];
+        let request = RouteRequest::new(&points).expect("Route request for simple route is empty");
+
+        let result = self.instance.route(&request).map_err(OsrmError::FfiError)?;
         let route_response =
             serde_json::from_str::<RouteResponse>(&result).map_err(OsrmError::JsonParse)?;
         if route_response.routes.is_empty() {
@@ -112,7 +108,6 @@ impl OsrmEngine {
 mod tests {
     use super::*; // Import OsrmEngine, TableRequest, etc.
     use crate::algorithm::Algorithm;
-    use crate::route::RouteRequestBuilder;
     use crate::tables::Point;
     #[test]
     fn it_calculates_a_table_successfully() {
@@ -124,21 +119,12 @@ mod tests {
             OsrmEngine::new(&path, Algorithm::MLD).expect("Failed to initialize OSRM engine");
 
         let request = TableRequest {
-            sources: vec![
-                Point {
-                    longitude: 2.3522,
-                    latitude: 48.8566,
-                }, // Paris
+            sources: &[
+                Point::new(48.8566, 2.3522).unwrap(), // Paris
             ],
-            destinations: vec![
-                Point {
-                    longitude: 5.3698,
-                    latitude: 43.2965,
-                }, // Marseille
-                Point {
-                    longitude: 4.8357,
-                    latitude: 45.7640,
-                }, // Lyon
+            destinations: &[
+                Point::new(43.2965, 5.3698).unwrap(), // Marseille
+                Point::new(45.7640, 4.8357).unwrap(), // Lyon
             ],
         };
         let response = engine.table(request).expect("Table request failed");
@@ -175,20 +161,11 @@ mod tests {
         let engine =
             OsrmEngine::new(&path, Algorithm::MLD).expect("Failed to initialize OSRM engine");
 
-        let points = vec![
-            Point {
-                longitude: 2.3522,
-                latitude: 48.8566,
-            },
-            Point {
-                longitude: 5.3698,
-                latitude: 43.2965,
-            },
+        let points = [
+            Point::new(48.8566, 2.3522).unwrap(),
+            Point::new(43.2965, 5.3698).unwrap(),
         ];
-        let request = RouteRequestBuilder::default()
-            .points(&points)
-            .build()
-            .expect("Failed to build RouteRequest");
+        let request = RouteRequest::new(&points).unwrap();
         let response = engine.route(&request).expect("route request failed");
 
         let duration = response
@@ -224,14 +201,8 @@ mod tests {
             OsrmEngine::new(&path, Algorithm::MLD).expect("Failed to initialize OSRM engine");
         let response = engine
             .simple_route(
-                Point {
-                    longitude: 2.3522,
-                    latitude: 48.8566,
-                },
-                Point {
-                    longitude: 5.3698,
-                    latitude: 43.2965,
-                },
+                Point::new(48.8566, 2.3522).unwrap(),
+                Point::new(43.2965, 5.3698).unwrap(),
             )
             .expect("route request failed");
         assert_eq!(response.code, "Ok");

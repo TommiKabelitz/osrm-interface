@@ -72,6 +72,7 @@ fn main() {
     let wrapper_dir = PathBuf::from(
         env::var("OUT_DIR").expect("Wrapper build failed to specify output directory"),
     );
+
     println!("cargo:rustc-link-search=native={}", wrapper_dir.display());
     println!("cargo:rustc-link-lib=static=osrm_wrapper");
 }
