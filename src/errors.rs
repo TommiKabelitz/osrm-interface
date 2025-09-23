@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use crate::route::RouteRequestBuilderError;
+
 #[derive(Error, Debug)]
 pub enum OsrmError {
     #[error("Failed to create OSRM instance")]
@@ -14,4 +16,14 @@ pub enum OsrmError {
     JsonParse(#[from] serde_json::Error),
     #[error("Internal FFI error: {0}")]
     FfiError(String),
+    #[error("Endpoint error: {0}")]
+    EndpointError(String),
+}
+
+#[derive(Error, Debug)]
+pub enum GeneralOsrmError {
+    #[error("OSRM error: {0}")]
+    OsrmError(#[from] OsrmError),
+    #[error("Route request builder error: {0}")]
+    RouteRequestBuilderError(#[from] RouteRequestBuilderError),
 }

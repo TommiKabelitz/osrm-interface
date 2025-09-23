@@ -1,10 +1,11 @@
-use derive_builder::Builder;
 use crate::point::Point;
-use serde::{Deserialize, Serialize};
 use crate::waypoints::Waypoint;
+use derive_builder::Builder;
+use serde::{Deserialize, Serialize};
+
 #[derive(Debug, Builder, Clone)]
-pub struct RouteRequest {
-    pub points : Vec<Point>,
+pub struct RouteRequest<'a> {
+    pub points: &'a Vec<Point>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -49,5 +50,4 @@ pub struct Leg {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Step {
-}
+pub struct Step {}
