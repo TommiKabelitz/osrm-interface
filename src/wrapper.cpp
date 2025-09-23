@@ -3,9 +3,9 @@
 #include <osrm/table_parameters.hpp>
 #include <osrm/engine_config.hpp>
 #include <osrm/json_container.hpp>
-#include <util/json_renderer.hpp>
 #include <osrm/route_parameters.hpp>
 #include <osrm/trip_parameters.hpp>
+#inlude "json/json_serialiser.cpp"
 // #include <mapbox/variant.hpp>
 
 #include <string>
@@ -112,13 +112,15 @@ extern "C"
         osrm::json::Object result;
         const auto status = osrm_ptr->Table(params, result);
 
+        std::ostringstream oss;
         std::string result_str;
         int code;
 
         if (status == osrm::Status::Ok)
         {
             code = 0;
-            osrm::util::json::render(result_str, result);
+            serialize_object(oss, result);
+            result_str = oss.str();
         }
         else
         {
@@ -181,13 +183,15 @@ extern "C"
         osrm::json::Object result;
         const auto status = osrm_ptr->Route(params, result);
 
+        std::ostringstream oss;
         std::string result_str;
         int code;
 
         if (status == osrm::Status::Ok)
         {
             code = 0;
-            osrm::util::json::render(result_str, result);
+            serialize_object(oss, result);
+            result_str = oss.str();
         }
         else
         {
@@ -233,13 +237,15 @@ extern "C"
         osrm::json::Object result;
         const auto status = osrm_ptr->Trip(params, result);
 
+        std::ostringstream oss;
         std::string result_str;
         int code;
 
         if (status == osrm::Status::Ok)
         {
             code = 0;
-            osrm::util::json::render(result_str, result);
+            serialize_object(oss, result);
+            result_str = oss.str();
         }
         else
         {
