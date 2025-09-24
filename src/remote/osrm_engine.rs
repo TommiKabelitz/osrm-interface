@@ -1,27 +1,27 @@
 use itertools::Itertools;
 
-use crate::algorithm;
-use crate::errors::OsrmError;
+use crate::errors::{OsrmError, RemoteOsrmError};
 use crate::point::Point;
+use crate::request_types::Profile;
 use crate::route::{RouteRequest, RouteResponse, SimpleRouteResponse};
 use crate::tables::{TableRequest, TableResponse};
 use crate::trip::{TripRequest, TripResponse};
 
-pub struct OsrmEngine {
-    endpoint: &'static str,
+pub struct OsrmEngine<'a> {
+    endpoint: &'a str,
+    pub profile: Profile,
 }
 
-impl OsrmEngine {
-    pub fn new(_base_path: &str, _algorithm: algorithm::Algorithm) -> Result<Self, OsrmError> {
-        let endpoint = env!("OSRM_ENDPOINT_COMPILED");
-        Ok(Self { endpoint })
+impl<'a> OsrmEngine<'a> {
+    pub fn new(endpoint: &'a str, profile: Profile) -> Self {
+        Self { endpoint, profile }
     }
 
     pub fn table(&self, table_request: TableRequest) -> Result<TableResponse, OsrmError> {
         let len_sources = table_request.sources.len();
         let len_destinations = table_request.destinations.len();
         if len_sources == 0 || len_destinations == 0 {
-            return Err(OsrmError::InvalidTableArgument);
+            return Err(OsrmError::InvalidTableRequest);
         }
 
         let coordinates = table_request
@@ -37,15 +37,16 @@ impl OsrmEngine {
             .join(";");
 
         let url = format!(
-            "{}/table/v1/driving/{coordinates}?sources={source_indices}&destinations={destination_indices}",
-            self.endpoint
+            "{}/table/v1/{}/{coordinates}?sources={source_indices}&destinations={destination_indices}",
+            self.endpoint,
+            self.profile.url_form()
         );
         let response = ureq::get(url)
             .call()
-            .map_err(|e| OsrmError::EndpointError(e.to_string()))?
+            .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))?
             .into_body()
             .read_json::<TableResponse>()
-            .map_err(|e| OsrmError::EndpointError(e.to_string()))?;
+            .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))?;
 
         Ok(response)
     }
@@ -53,7 +54,7 @@ impl OsrmEngine {
     pub fn route(&self, route_request: &RouteRequest) -> Result<RouteResponse, OsrmError> {
         let len = route_request.points.len();
         if len == 0 {
-            return Err(OsrmError::InvalidTableArgument);
+            return Err(OsrmError::InvalidRouteRequest);
         }
         let coordinates = route_request
             .points
@@ -62,8 +63,9 @@ impl OsrmEngine {
             .join(";");
 
         let url = format!(
-            "http://{}/route/v1/driving/{coordinates}?alternatives={}&steps={}&geometries={}&overview={}&annotations={}",
+            "http://{}/route/v1/{}/{coordinates}?alternatives={}&steps={}&geometries={}&overview={}&annotations={}",
             self.endpoint,
+            self.profile.url_form(),
             route_request.alternatives,
             route_request.steps,
             route_request.geometry.url_form(),
@@ -73,10 +75,10 @@ impl OsrmEngine {
 
         let response = ureq::get(url)
             .call()
-            .map_err(|e| OsrmError::EndpointError(e.to_string()))?
+            .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))?
             .into_body()
             .read_json::<RouteResponse>()
-            .map_err(|e| OsrmError::EndpointError(e.to_string()))?;
+            .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))?;
 
         Ok(response)
     }
@@ -84,7 +86,7 @@ impl OsrmEngine {
     pub fn trip(&self, trip_request: TripRequest) -> Result<TripResponse, OsrmError> {
         let len = trip_request.points.len();
         if len == 0 {
-            return Err(OsrmError::InvalidTableArgument);
+            return Err(OsrmError::InvalidTripRequest);
         }
         let coordinates = trip_request
             .points
@@ -93,8 +95,9 @@ impl OsrmEngine {
             .join(";");
 
         let url = format!(
-            "{}/trip/v1/driving/{coordinates}?steps={}&geometries={}&overview={}&annotations={}",
+            "{}/trip/v1/{}/{coordinates}?steps={}&geometries={}&overview={}&annotations={}",
             self.endpoint,
+            self.profile.url_form(),
             trip_request.steps,
             trip_request.geometry.url_form(),
             trip_request.overview.url_form(),
@@ -102,10 +105,10 @@ impl OsrmEngine {
         );
         let response = ureq::get(url)
             .call()
-            .map_err(|e| OsrmError::EndpointError(e.to_string()))?
+            .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))?
             .into_body()
             .read_json::<TripResponse>()
-            .map_err(|e| OsrmError::EndpointError(e.to_string()))?;
+            .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))?;
 
         Ok(response)
     }

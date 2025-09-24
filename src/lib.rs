@@ -7,17 +7,10 @@ pub mod tables;
 pub mod trip;
 pub mod waypoints;
 
-#[cfg(osrm_native)]
-mod native;
-#[cfg(osrm_native)]
-pub use native::OsrmEngine;
+#[cfg(feature = "native")]
+pub mod native;
 
-#[cfg(osrm_remote)]
-mod remote;
-#[cfg(osrm_remote)]
-pub use remote::OsrmEngine;
+#[cfg(feature = "remote")]
+pub mod remote;
 
-#[cfg(osrm_mock)]
-mod mock;
-#[cfg(osrm_mock)]
-pub use mock::OsrmEngine;
+pub mod mock;

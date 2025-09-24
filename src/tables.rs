@@ -1,7 +1,10 @@
 pub(crate) use crate::point::Point;
-use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
+#[cfg_attr(
+    any(feature = "native", feature = "remote"),
+    derive(serde::Deserialize)
+)]
 #[allow(dead_code)]
 pub struct TableResponse {
     pub code: String,
@@ -10,7 +13,11 @@ pub struct TableResponse {
     pub sources: Vec<TableLocationEntry>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
+#[cfg_attr(
+    any(feature = "native", feature = "remote"),
+    derive(serde::Deserialize)
+)]
 #[allow(dead_code)]
 pub struct TableLocationEntry {
     pub hint: String,
