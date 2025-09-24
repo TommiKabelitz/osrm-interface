@@ -1,32 +1,8 @@
 use std::{env, path::PathBuf};
 
 fn main() {
-    let dotenv_path = env::var("DOTENV_FILE").expect("DOTENV_FILE environment variable unset.");
-
-    dotenvy::from_filename(&dotenv_path).expect("Failed to find the .env file");
-    println!("cargo:rerun-if-changed={}", dotenv_path);
-
-    println!("cargo::rustc-check-cfg=cfg(osrm_mock)");
-    println!("cargo::rustc-check-cfg=cfg(osrm_native)");
-    println!("cargo::rustc-check-cfg=cfg(osrm_remote)");
-
-    let mode = std::env::var("OSRM_MODE").expect("OSRM_MODE is unset, specify in the .env");
-    match mode.as_str() {
-        "native" => println!("cargo:rustc-cfg=osrm_native"),
-        "remote" => {
-            println!("cargo:rustc-cfg=osrm_remote");
-            let address = env::var("OSRM_ROUTED_ADDRESS")
-                .expect("Require OSRM_ROUTED_ADDRESS be set for OSRM_MODE=remote");
-            let port = env::var("OSRM_ROUTED_PORT")
-                .expect("Require OSRM_ROUTED_PORT be set for OSRM_MODE=remote");
-            let endpoint = format!("{}:{}", address, port);
-            println!("cargo:rustc-env=OSRM_ENDPOINT_COMPILED={}", endpoint)
-        }
-        "mock" => println!("cargo:rustc-cfg=osrm_mock"),
-        _ => println!("cargo:rustc-cfg=osrm_mock"),
-    }
-
-    if mode != "native" {
+    let native_enabled = std::env::var("CARGO_FEATURE_NATIVE").is_ok();
+    if !native_enabled {
         return;
     }
     println!("cargo:warning=Compiling OSRM wrapper");

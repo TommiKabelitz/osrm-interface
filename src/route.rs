@@ -1,7 +1,6 @@
 use crate::request_types::OverviewZoom;
 use crate::waypoints::Waypoint;
 use crate::{point::Point, request_types::GeometryType};
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
 pub struct RouteRequest<'a> {
@@ -59,7 +58,11 @@ impl<'a> RouteRequest<'a> {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
+#[cfg_attr(
+    any(feature = "native", feature = "remote"),
+    derive(serde::Deserialize)
+)]
 #[allow(dead_code)]
 pub struct SimpleRouteResponse {
     pub code: String,
@@ -67,7 +70,11 @@ pub struct SimpleRouteResponse {
     pub distance: f64,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
+#[cfg_attr(
+    any(feature = "native", feature = "remote"),
+    derive(serde::Deserialize)
+)]
 #[allow(dead_code)]
 pub struct RouteResponse {
     pub code: String,
@@ -75,14 +82,22 @@ pub struct RouteResponse {
     pub waypoints: Vec<Waypoint>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug)]
+#[cfg_attr(
+    any(feature = "native", feature = "remote"),
+    derive(serde::Deserialize)
+)]
 pub struct OsrmResponse {
     pub code: String,
     pub routes: Vec<Route>,
     pub waypoints: Vec<Waypoint>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug)]
+#[cfg_attr(
+    any(feature = "native", feature = "remote"),
+    derive(serde::Deserialize)
+)]
 pub struct Route {
     pub legs: Vec<Leg>,
     pub weight_name: String,
@@ -91,7 +106,11 @@ pub struct Route {
     pub duration: f64,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug)]
+#[cfg_attr(
+    any(feature = "native", feature = "remote"),
+    derive(serde::Deserialize)
+)]
 pub struct Leg {
     pub steps: Vec<Step>,
     pub weight: f64,
@@ -100,5 +119,9 @@ pub struct Leg {
     pub distance: f64,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug)]
+#[cfg_attr(
+    any(feature = "native", feature = "remote"),
+    derive(serde::Deserialize)
+)]
 pub struct Step {}

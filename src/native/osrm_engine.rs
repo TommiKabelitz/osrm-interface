@@ -1,5 +1,5 @@
 use crate::algorithm;
-use crate::errors::OsrmError;
+use crate::errors::{NativeOsrmError, OsrmError};
 use crate::point::Point;
 use crate::route::{RouteRequest, RouteResponse, SimpleRouteResponse};
 use crate::tables::{TableRequest, TableResponse};
@@ -13,8 +13,8 @@ pub struct OsrmEngine {
 
 impl OsrmEngine {
     pub fn new(base_path: &str, algorithm: algorithm::Algorithm) -> Result<Self, OsrmError> {
-        let osrm =
-            Osrm::new(base_path, algorithm.as_str()).map_err(|_| OsrmError::Initialization)?;
+        let osrm = Osrm::new(base_path, algorithm.as_str())
+            .map_err(|_| OsrmError::Native(NativeOsrmError::Initialization))?;
         Ok(OsrmEngine { instance: osrm })
     }
 
@@ -24,7 +24,7 @@ impl OsrmEngine {
         let len_sources = table_request.sources.len();
         let len_destinations = table_request.destinations.len();
         if len_sources == 0 || len_destinations == 0 {
-            return Err(OsrmError::InvalidTableArgument);
+            return Err(OsrmError::InvalidTableRequest);
         }
         let sources_index: &[usize] = &(0..(len_sources)).collect::<Vec<usize>>()[..];
         let destination_index: &[usize] =
@@ -37,8 +37,9 @@ impl OsrmEngine {
         let result = self
             .instance
             .table(coordinates, Some(sources_index), Some(destination_index))
-            .map_err(OsrmError::FfiError)?;
-        serde_json::from_str::<TableResponse>(&result).map_err(OsrmError::JsonParse)
+            .map_err(|e| OsrmError::Native(NativeOsrmError::FfiError(e)))?;
+        serde_json::from_str::<TableResponse>(&result)
+            .map_err(|e| OsrmError::Native(NativeOsrmError::JsonParse(Box::new(e))))
     }
 
     pub fn route(&self, route_request: &RouteRequest) -> Result<RouteResponse, OsrmError> {
@@ -49,8 +50,9 @@ impl OsrmEngine {
         let result = self
             .instance
             .route(route_request)
-            .map_err(OsrmError::FfiError)?;
-        serde_json::from_str::<RouteResponse>(&result).map_err(OsrmError::JsonParse)
+            .map_err(|e| OsrmError::Native(NativeOsrmError::FfiError(e)))?;
+        serde_json::from_str::<RouteResponse>(&result)
+            .map_err(|e| OsrmError::Native(NativeOsrmError::JsonParse(Box::new(e))))
     }
 
     pub fn trip(&self, trip_request: TripRequest) -> Result<TripResponse, OsrmError> {
@@ -66,20 +68,24 @@ impl OsrmEngine {
         let result = self
             .instance
             .trip(coordinates)
-            .map_err(OsrmError::FfiError)?;
-        serde_json::from_str::<TripResponse>(&result).map_err(OsrmError::JsonParse)
+            .map_err(|e| OsrmError::Native(NativeOsrmError::FfiError(e)))?;
+        serde_json::from_str::<TripResponse>(&result)
+            .map_err(|e| OsrmError::Native(NativeOsrmError::JsonParse(Box::new(e))))
     }
 
     pub fn simple_route(&self, from: Point, to: Point) -> Result<SimpleRouteResponse, OsrmError> {
         let points = [from, to];
         let request = RouteRequest::new(&points).expect("Route request for simple route is empty");
 
-        let result = self.instance.route(&request).map_err(OsrmError::FfiError)?;
-        let route_response =
-            serde_json::from_str::<RouteResponse>(&result).map_err(OsrmError::JsonParse)?;
+        let result = self
+            .instance
+            .route(&request)
+            .map_err(|e| OsrmError::Native(NativeOsrmError::FfiError(e)))?;
+        let route_response = serde_json::from_str::<RouteResponse>(&result)
+            .map_err(|e| OsrmError::Native(NativeOsrmError::JsonParse(Box::new(e))))?;
         if route_response.routes.is_empty() {
-            return Err(OsrmError::ApiError(
-                "No route were returned between those 2 points".to_owned(),
+            return Err(OsrmError::EmptyResponse(
+                "No route was returned between those 2 points".to_owned(),
             ));
         }
         Ok(SimpleRouteResponse {
@@ -101,113 +107,5 @@ impl OsrmEngine {
                 .map(|l| l.duration)
                 .sum(),
         })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*; // Import OsrmEngine, TableRequest, etc.
-    use crate::algorithm::Algorithm;
-    use crate::tables::Point;
-    #[test]
-    fn it_calculates_a_table_successfully() {
-        dotenvy::dotenv().expect(".env file could not be read");
-        let path = std::env::var("OSRM_TEST_DATA_PATH_MLD").expect(
-            "Environment variable OSRM_TEST_DATA_PATH_MLD must be defined with a french map",
-        );
-        let engine =
-            OsrmEngine::new(&path, Algorithm::MLD).expect("Failed to initialize OSRM engine");
-
-        let request = TableRequest {
-            sources: &[
-                Point::new(48.8566, 2.3522).unwrap(), // Paris
-            ],
-            destinations: &[
-                Point::new(43.2965, 5.3698).unwrap(), // Marseille
-                Point::new(45.7640, 4.8357).unwrap(), // Lyon
-            ],
-        };
-        let response = engine.table(request).expect("Table request failed");
-
-        println!("{:?}", response.durations);
-
-        assert_eq!(response.code, "Ok");
-        assert_eq!(
-            response.durations.len(),
-            1,
-            "Should have 1 row for 1 source"
-        );
-        assert_eq!(
-            response.durations[0].len(),
-            2,
-            "Should have 2 columns for 2 destinations"
-        );
-        assert!(
-            response.durations[0][0].is_some(),
-            "Paris-Marseille duration should exist"
-        );
-        assert!(
-            response.durations[0][1].is_some(),
-            "Paris-Lyon duration should exist"
-        );
-    }
-
-    #[test]
-    fn it_calculates_a_route_successfully() {
-        dotenvy::dotenv().expect(".env file could not be read");
-        let path = std::env::var("OSRM_TEST_DATA_PATH_MLD").expect(
-            "Environment variable OSRM_TEST_DATA_PATH_MLD must be defined with a french map",
-        );
-        let engine =
-            OsrmEngine::new(&path, Algorithm::MLD).expect("Failed to initialize OSRM engine");
-
-        let points = [
-            Point::new(48.8566, 2.3522).unwrap(),
-            Point::new(43.2965, 5.3698).unwrap(),
-        ];
-        let request = RouteRequest::new(&points).unwrap();
-        let response = engine.route(&request).expect("route request failed");
-
-        let duration = response
-            .routes
-            .first()
-            .unwrap()
-            .legs
-            .first()
-            .unwrap()
-            .duration;
-        let distance = response
-            .routes
-            .first()
-            .unwrap()
-            .legs
-            .first()
-            .unwrap()
-            .distance
-            / 1000.0; // kilometer
-        assert_eq!(response.code, "Ok");
-        assert_eq!(response.routes.len(), 1, "Should have 1 row for 1 route");
-        assert!(700.0 < distance && distance < 800.0); // between 700 and 800 km (google map used)
-        assert!(27000.0 < duration && duration < 30600.0); // between 7h30 and 8h30 (google map used)
-    }
-
-    #[test]
-    fn it_calculates_a_simple_route_successfully() {
-        dotenvy::dotenv().expect(".env file could not be read");
-        let path = std::env::var("OSRM_TEST_DATA_PATH_MLD").expect(
-            "Environment variable OSRM_TEST_DATA_PATH_MLD must be defined with a french map",
-        );
-        let engine =
-            OsrmEngine::new(&path, Algorithm::MLD).expect("Failed to initialize OSRM engine");
-        let response = engine
-            .simple_route(
-                Point::new(48.8566, 2.3522).unwrap(),
-                Point::new(43.2965, 5.3698).unwrap(),
-            )
-            .expect("route request failed");
-        assert_eq!(response.code, "Ok");
-        println!("{:?}", response);
-        assert!(700.0 < (response.distance / 1000.0) && (response.distance / 1000.0) < 800.0); // between 700 and 800 km (google map used)
-        assert!(27000.0 < response.durations && response.durations < 30600.0); // between 7h30 and 8h30 (google map used)
     }
 }

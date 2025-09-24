@@ -2,7 +2,6 @@ use crate::{
     point::Point,
     request_types::{GeometryType, OverviewZoom},
 };
-use serde::Deserialize;
 
 #[derive(Debug)]
 pub struct TripRequest<'a> {
@@ -48,6 +47,10 @@ impl<'a> TripRequest<'a> {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
+#[cfg_attr(
+    any(feature = "native", feature = "remote"),
+    derive(serde::Deserialize)
+)]
 #[allow(dead_code)]
 pub struct TripResponse {}

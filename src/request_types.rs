@@ -23,11 +23,27 @@ pub enum OverviewZoom {
     False = 2,
 }
 impl OverviewZoom {
-    pub fn url_form(self) -> &'static str {
+    pub fn url_form(&self) -> &'static str {
         match self {
             Self::Full => "full",
             Self::Simplified => "simplified",
             Self::False => "false",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Profile {
+    Car,
+    Bike,
+    Foot,
+}
+impl Profile {
+    pub fn url_form(self) -> &'static str {
+        match self {
+            Self::Bike => "bike",
+            Self::Car => "car",
+            Self::Foot => "foot",
         }
     }
 }

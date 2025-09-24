@@ -11,15 +11,15 @@ use crate::waypoints::Waypoint;
 pub struct OsrmEngine {}
 
 impl OsrmEngine {
-    pub fn new(_base_path: &str, _algorithm: algorithm::Algorithm) -> Result<Self, OsrmError> {
-        Ok(Self {})
+    pub fn new(_base_path: &str, _algorithm: algorithm::Algorithm) -> Self {
+        Self {}
     }
 
     pub fn table(&self, table_request: TableRequest) -> Result<TableResponse, OsrmError> {
         let len_sources = table_request.sources.len();
         let len_destinations = table_request.destinations.len();
         if len_sources == 0 || len_destinations == 0 {
-            return Err(OsrmError::InvalidTableArgument);
+            return Err(OsrmError::InvalidTableRequest);
         }
 
         let durations: Vec<Vec<Option<f64>>> = (0..len_sources)
@@ -59,7 +59,7 @@ impl OsrmEngine {
     pub fn route(&self, route_request: &RouteRequest) -> Result<RouteResponse, OsrmError> {
         let len = route_request.points.len();
         if len == 0 {
-            return Err(OsrmError::InvalidTableArgument);
+            return Err(OsrmError::InvalidRouteRequest);
         }
 
         let routes: Vec<Route> = route_request
@@ -99,7 +99,7 @@ impl OsrmEngine {
     pub fn trip(&self, trip_request: TripRequest) -> Result<TripResponse, OsrmError> {
         let len = trip_request.points.len();
         if len == 0 {
-            return Err(OsrmError::InvalidTableArgument);
+            return Err(OsrmError::InvalidRouteRequest);
         }
         Ok(TripResponse {})
     }
