@@ -2,8 +2,8 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum NativeOsrmError {
-    #[error("Failed to create OSRM instance")]
-    Initialization,
+    #[error("Failed to create OSRM instance: {0}")]
+    Initialization(String),
     #[error("Invalid path parameter: {0}")]
     InvalidPath(String),
     #[error("Failed to parse OSRM response: {0}")]

@@ -14,6 +14,8 @@
 extern "C"
 {
 
+    static thread_local std::string last_error;
+
     enum GeometryType
     {
         GeometryType_Polyline = 0,
@@ -59,7 +61,7 @@ extern "C"
         }
         catch (const std::exception &e)
         {
-            std::cerr << "Fail to create an OSRM instance: " << e.what() << std::endl;
+            last_error = e.what();
             return nullptr;
         }
     }
@@ -263,6 +265,11 @@ extern "C"
         strcpy(message, result_str.c_str());
 
         return {code, message};
+    }
+
+    const char *osrm_last_error()
+    {
+        return last_error.empty() ? nullptr : last_error.c_str();
     }
 
     void osrm_free_string(char *s)
