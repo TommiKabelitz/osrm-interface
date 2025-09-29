@@ -5,6 +5,7 @@ fn main() {
     if !native_enabled {
         return;
     }
+    println!("cargo:rerun-if-changed=src/wrapper.cpp");
     println!("cargo:warning=Compiling OSRM wrapper");
     cc::Build::new()
         .cpp(true)
