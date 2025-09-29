@@ -18,7 +18,6 @@ pub struct TableResponse {
     any(feature = "native", feature = "remote"),
     derive(serde::Deserialize)
 )]
-#[allow(dead_code)]
 pub struct TableLocationEntry {
     pub hint: String,
     pub location: [f64; 2],
