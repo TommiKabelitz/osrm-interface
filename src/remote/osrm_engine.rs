@@ -7,13 +7,13 @@ use crate::route::{RouteRequest, RouteResponse, SimpleRouteResponse};
 use crate::tables::{TableRequest, TableResponse};
 use crate::trip::{TripRequest, TripResponse};
 
-pub struct OsrmEngine<'a> {
-    endpoint: &'a str,
+pub struct OsrmEngine {
+    endpoint: String,
     pub profile: Profile,
 }
 
-impl<'a> OsrmEngine<'a> {
-    pub fn new(endpoint: &'a str, profile: Profile) -> Self {
+impl OsrmEngine {
+    pub fn new(endpoint: String, profile: Profile) -> Self {
         Self { endpoint, profile }
     }
 
@@ -63,7 +63,7 @@ impl<'a> OsrmEngine<'a> {
             .join(";");
 
         let url = format!(
-            "http://{}/route/v1/{}/{coordinates}?alternatives={}&steps={}&geometries={}&overview={}&annotations={}",
+            "{}/route/v1/{}/{coordinates}?alternatives={}&steps={}&geometries={}&overview={}&annotations={}",
             self.endpoint,
             self.profile.url_form(),
             route_request.alternatives,
