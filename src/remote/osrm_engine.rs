@@ -83,7 +83,7 @@ impl OsrmEngine {
         Ok(response)
     }
 
-    pub fn trip(&self, trip_request: TripRequest) -> Result<TripResponse, OsrmError> {
+    pub fn trip(&self, trip_request: &TripRequest) -> Result<TripResponse, OsrmError> {
         let len = trip_request.points.len();
         if len == 0 {
             return Err(OsrmError::InvalidTripRequest);
