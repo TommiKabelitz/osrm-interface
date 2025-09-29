@@ -2,6 +2,51 @@
 #include <osrm/osrm.hpp>
 #include "osrm/json_container.hpp"
 
+#include <iomanip> // for std::setw, std::setfill
+
+void handle_json_string_escapes(std::ostringstream &oss, const std::string &input)
+{
+    for (unsigned char c : input)
+    {
+        switch (c)
+        {
+        case '\"':
+            oss << "\\\"";
+            break;
+        case '\\':
+            oss << "\\\\";
+            break;
+        case '\b':
+            oss << "\\b";
+            break;
+        case '\f':
+            oss << "\\f";
+            break;
+        case '\n':
+            oss << "\\n";
+            break;
+        case '\r':
+            oss << "\\r";
+            break;
+        case '\t':
+            oss << "\\t";
+            break;
+        default:
+            if (c < 0x20)
+            {
+                // control chars -> \u00XX
+                oss << "\\u"
+                    << std::hex << std::setw(4) << std::setfill('0') << (int)c
+                    << std::dec; // reset back to decimal
+            }
+            else
+            {
+                oss << c;
+            }
+        }
+    }
+}
+
 void serialize_value(std::ostringstream &oss, const osrm::json::Value &v);
 
 void serialize_object(std::ostringstream &oss, const osrm::json::Object &obj)
@@ -37,7 +82,9 @@ void serialize_value(std::ostringstream &oss, const osrm::json::Value &v)
 {
     if (auto p = std::get_if<osrm::json::String>(&v))
     {
-        oss << "\"" << p->value << "\"";
+        oss << "\"";
+        handle_json_string_escapes(oss, p->value);
+        oss << "\"";
     }
     else if (auto p = std::get_if<osrm::json::Number>(&v))
     {

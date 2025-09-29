@@ -46,6 +46,7 @@ unsafe extern "C" {
         flags: u8,
     ) -> OsrmResult;
 
+    fn osrm_last_error() -> *const c_char;
     fn osrm_free_string(s: *mut c_char);
 }
 
@@ -60,7 +61,13 @@ impl Osrm {
         let instance = unsafe { osrm_create(c_path.as_ptr(), c_algorithm.as_ptr()) };
 
         if instance.is_null() {
-            Err("Failure to create an OSRM instance.".to_string())
+            let err_ptr = unsafe { osrm_last_error() };
+            let msg = if err_ptr.is_null() {
+                "unknown error".to_string()
+            } else {
+                unsafe { CStr::from_ptr(err_ptr).to_string_lossy().into_owned() }
+            };
+            Err(format!("Failure to create an OSRM instance: {}", msg))
         } else {
             Ok(Osrm { instance })
         }

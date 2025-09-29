@@ -14,7 +14,7 @@ pub struct OsrmEngine {
 impl OsrmEngine {
     pub fn new(base_path: &str, algorithm: algorithm::Algorithm) -> Result<Self, OsrmError> {
         let osrm = Osrm::new(base_path, algorithm.as_str())
-            .map_err(|_| OsrmError::Native(NativeOsrmError::Initialization))?;
+            .map_err(|e| OsrmError::Native(NativeOsrmError::Initialization(e)))?;
         Ok(OsrmEngine { instance: osrm })
     }
 
@@ -51,6 +51,7 @@ impl OsrmEngine {
             .instance
             .route(route_request)
             .map_err(|e| OsrmError::Native(NativeOsrmError::FfiError(e)))?;
+
         serde_json::from_str::<RouteResponse>(&result)
             .map_err(|e| OsrmError::Native(NativeOsrmError::JsonParse(Box::new(e))))
     }
