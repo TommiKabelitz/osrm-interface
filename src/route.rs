@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 use crate::request_types::OverviewZoom;
 use crate::waypoints::Waypoint;
 use crate::{point::Point, request_types::GeometryType};
@@ -14,7 +16,7 @@ pub struct RouteRequest<'a> {
 }
 impl<'a> RouteRequest<'a> {
     pub fn new(points: &'a [Point]) -> Option<Self> {
-        if points.is_empty() {
+        if points.len() < 2 {
             return None;
         }
         Some(Self {
@@ -80,6 +82,12 @@ pub struct RouteResponse {
     pub code: String,
     pub routes: Vec<Route>,
     pub waypoints: Vec<Waypoint>,
+}
+
+impl RouteResponse {
+    pub fn full_geometry(&self) -> String {
+        self.routes.iter().map(|r| r.geometry.clone()).join("")
+    }
 }
 
 #[derive(Debug)]
