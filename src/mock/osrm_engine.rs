@@ -101,7 +101,38 @@ impl OsrmEngine {
         if len == 0 {
             return Err(OsrmError::InvalidRouteRequest);
         }
-        Ok(TripResponse {})
+        let trips: Vec<Route> = trip_request
+            .points
+            .windows(2)
+            .map(|_| Route {
+                legs: vec![Leg {
+                    steps: vec![Step {}],
+                    weight: 0.1,
+                    summary: "Mock summary".to_string(),
+                    duration: 1.0,
+                    distance: 1.0,
+                }],
+                weight_name: "Mock weight".to_string(),
+                geometry: "Mock polyline".to_string(),
+                weight: 0.1,
+                duration: 1.0,
+            })
+            .collect();
+
+        Ok(TripResponse {
+            code: "Ok".to_string(),
+            trips,
+            waypoints: trip_request
+                .points
+                .iter()
+                .map(|p| Waypoint {
+                    hint: "Mock hint".to_string(),
+                    location: [p.latitude(), p.longitude()],
+                    name: "Mock name".to_string(),
+                    distance: 0.0,
+                })
+                .collect(),
+        })
     }
 
     pub fn simple_route(&self, _from: Point, _to: Point) -> Result<SimpleRouteResponse, OsrmError> {

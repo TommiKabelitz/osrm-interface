@@ -1,6 +1,8 @@
 use crate::{
     point::Point,
     request_types::{GeometryType, OverviewZoom},
+    route::Route,
+    waypoints::Waypoint,
 };
 
 #[derive(Debug)]
@@ -52,5 +54,8 @@ impl<'a> TripRequest<'a> {
     any(feature = "native", feature = "remote"),
     derive(serde::Deserialize)
 )]
-#[allow(dead_code)]
-pub struct TripResponse {}
+pub struct TripResponse {
+    pub code: String,
+    pub trips: Vec<Route>,
+    pub waypoints: Vec<Waypoint>,
+}
