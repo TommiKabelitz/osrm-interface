@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
     derive(serde::Deserialize)

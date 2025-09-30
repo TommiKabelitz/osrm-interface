@@ -1,4 +1,5 @@
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[repr(C)]
 pub enum GeometryType {
     Polyline = 0,
@@ -15,7 +16,8 @@ impl GeometryType {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[repr(C)]
 pub enum OverviewZoom {
     Simplified = 0,
@@ -32,7 +34,8 @@ impl OverviewZoom {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub enum Profile {
     Car,
     Bike,

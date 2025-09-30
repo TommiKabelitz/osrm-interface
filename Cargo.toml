@@ -16,6 +16,7 @@ categories = ["api-bindings", "external-ffi-bindings"]
 default = []
 remote = ["serde", "serde_json", "ureq"]
 native = ["serde", "serde_json"]
+debug = []
 
 
 [dependencies]

@@ -1,6 +1,6 @@
 pub(crate) use crate::point::Point;
 
-#[derive(Debug)]
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
     derive(serde::Deserialize)
@@ -13,7 +13,7 @@ pub struct TableResponse {
     pub sources: Vec<TableLocationEntry>,
 }
 
-#[derive(Debug)]
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
     derive(serde::Deserialize)
@@ -25,7 +25,8 @@ pub struct TableLocationEntry {
     pub distance: f64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub struct TableRequest<'a> {
     pub sources: &'a [Point],
     pub destinations: &'a [Point],

@@ -60,7 +60,7 @@ impl<'a> RouteRequest<'a> {
     }
 }
 
-#[derive(Debug)]
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
     derive(serde::Deserialize)
@@ -72,7 +72,7 @@ pub struct SimpleRouteResponse {
     pub distance: f64,
 }
 
-#[derive(Debug)]
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
     derive(serde::Deserialize)
@@ -90,18 +90,18 @@ impl RouteResponse {
     }
 }
 
-#[derive(Debug)]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
     derive(serde::Deserialize)
 )]
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub struct OsrmResponse {
     pub code: String,
     pub routes: Vec<Route>,
     pub waypoints: Vec<Waypoint>,
 }
 
-#[derive(Debug)]
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
     derive(serde::Deserialize)
@@ -114,7 +114,7 @@ pub struct Route {
     pub duration: f64,
 }
 
-#[derive(Debug)]
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
     derive(serde::Deserialize)
@@ -127,7 +127,7 @@ pub struct Leg {
     pub distance: f64,
 }
 
-#[derive(Debug)]
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
     derive(serde::Deserialize)
