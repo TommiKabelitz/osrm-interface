@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 use crate::{
     point::Point,
     request_types::{GeometryType, OverviewZoom},
@@ -5,7 +7,7 @@ use crate::{
     waypoints::Waypoint,
 };
 
-#[derive(Debug)]
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub struct TripRequest<'a> {
     pub points: &'a [Point],
     pub steps: bool,
@@ -49,7 +51,7 @@ impl<'a> TripRequest<'a> {
     }
 }
 
-#[derive(Debug)]
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
     derive(serde::Deserialize)
@@ -58,4 +60,9 @@ pub struct TripResponse {
     pub code: String,
     pub trips: Vec<Route>,
     pub waypoints: Vec<Waypoint>,
+}
+impl TripResponse {
+    pub fn full_geometry(&self) -> String {
+        self.trips.iter().map(|r| r.geometry.clone()).join("")
+    }
 }

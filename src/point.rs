@@ -1,4 +1,5 @@
-#[derive(Debug, Clone)]
+#[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone)]
 pub struct Point {
     latitude: f64,
     longitude: f64,
