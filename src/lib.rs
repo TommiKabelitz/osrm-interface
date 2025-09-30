@@ -1,11 +1,15 @@
 pub mod algorithm;
 pub mod errors;
+pub mod osrm_response_types;
 pub mod point;
 pub mod request_types;
 pub mod route;
+pub mod service_responses;
+mod str_ops;
 pub mod tables;
 pub mod trip;
-pub mod waypoints;
+
+pub(crate) use str_ops::get_index_of_line_col;
 
 #[cfg(feature = "native")]
 pub mod native;

@@ -17,6 +17,8 @@ export CXX=g++-12 # whichever compiler you have
 
 In addition, to run natively requires appropriately extracted osrm-map data. As described on [osrm-backend](https://github.com/Project-OSRM/osrm-backend), map data can be obtained from [Geofabrik](https://download.geofabrik.de/) and then needs to be extracted with `osrm-extract` before being partitioned (`osrm-partition`) and customized (`osrm-customize`) for MLD or contracted (`osrm-contract`) for CH.
 
+The path to the map data needs to be specified in the `.env` file to run the tests which attempt to route in Germany.
+
 
 ## 📖 License
 

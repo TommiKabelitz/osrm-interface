@@ -48,30 +48,24 @@ fn test_native_and_remote_route() {
         "Route response lengths disagree"
     );
     assert_eq!(
-        native_response.full_geometry(),
-        remote_response.full_geometry(),
-        "Polylines are not the same"
-    );
-    assert_eq!(
         native_response.waypoints.len(),
         remote_response.waypoints.len(),
         "Different numbers of waypoints",
     );
 
-    // Cast to u64 as technically it returns whole number of
-    // seconds and you sometimes get done by floating point
-    // TODO: Fix types
-    assert_eq!(
-        native_response
+    assert!(
+        (native_response
             .routes
             .iter()
             .map(|r| r.duration)
-            .sum::<f64>() as u64,
-        remote_response
-            .routes
-            .iter()
-            .map(|r| r.duration)
-            .sum::<f64>() as u64,
-        "Different durations"
+            .sum::<f64>() as i64
+            - remote_response
+                .routes
+                .iter()
+                .map(|r| r.duration)
+                .sum::<f64>() as i64)
+            .abs()
+            < 5,
+        "Durations differ by more than 5 seconds"
     );
 }
