@@ -10,7 +10,7 @@ fn main() {
     cc::Build::new()
         .cpp(true)
         .file("src/wrapper.cpp")
-        .flag("-std=c++17") // Wrapper code uses C++20
+        .flag("-std=c++17")
         // Expect the osrm headers to be placed in /usr/local/
         .include("/usr/local/include")
         .include("/usr/local/include/osrm") // Just in case includes are nested
