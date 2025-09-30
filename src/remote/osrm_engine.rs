@@ -3,9 +3,10 @@ use itertools::Itertools;
 use crate::errors::{OsrmError, RemoteOsrmError};
 use crate::point::Point;
 use crate::request_types::Profile;
-use crate::route::{RouteRequest, RouteResponse, SimpleRouteResponse};
-use crate::tables::{TableRequest, TableResponse};
-use crate::trip::{TripRequest, TripResponse};
+use crate::route::{RouteRequest, SimpleRouteResponse};
+use crate::service_responses::{RouteResponse, TableResponse, TripResponse};
+use crate::tables::TableRequest;
+use crate::trip::TripRequest;
 
 pub struct OsrmEngine {
     endpoint: String,
@@ -72,7 +73,6 @@ impl OsrmEngine {
             route_request.overview.url_form(),
             route_request.annotations
         );
-
         let response = ureq::get(url)
             .call()
             .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))?

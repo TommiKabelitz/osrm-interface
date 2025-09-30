@@ -1,12 +1,11 @@
-use std::vec;
-
 use crate::algorithm;
 use crate::errors::OsrmError;
+use crate::osrm_response_types::{Route, Waypoint};
 use crate::point::Point;
-use crate::route::{Leg, Route, RouteRequest, RouteResponse, SimpleRouteResponse, Step};
-use crate::tables::{TableLocationEntry, TableRequest, TableResponse};
-use crate::trip::{TripRequest, TripResponse};
-use crate::waypoints::Waypoint;
+use crate::route::{RouteRequest, SimpleRouteResponse};
+use crate::service_responses::{RouteResponse, TableResponse, TripResponse};
+use crate::tables::{TableLocationEntry, TableRequest};
+use crate::trip::TripRequest;
 
 pub struct OsrmEngine {}
 
@@ -36,9 +35,9 @@ impl OsrmEngine {
                 .destinations
                 .iter()
                 .map(|p| TableLocationEntry {
-                    hint: "Mocked hint".to_string(),
+                    hint: "Mock hint".to_string(),
                     location: [p.latitude(), p.longitude()],
-                    name: "Mocked_name".to_string(),
+                    name: "Mock name".to_string(),
                     distance: 0.0,
                 })
                 .collect(),
@@ -57,27 +56,14 @@ impl OsrmEngine {
     }
 
     pub fn route(&self, route_request: &RouteRequest) -> Result<RouteResponse, OsrmError> {
-        let len = route_request.points.len();
-        if len == 0 {
+        if route_request.points.len() < 2 {
             return Err(OsrmError::InvalidRouteRequest);
         }
 
         let routes: Vec<Route> = route_request
             .points
             .windows(2)
-            .map(|_| Route {
-                legs: vec![Leg {
-                    steps: vec![Step {}],
-                    weight: 0.1,
-                    summary: "Mock summary".to_string(),
-                    duration: 1.0,
-                    distance: 1.0,
-                }],
-                weight_name: "Mock weight".to_string(),
-                geometry: "Mock polyline".to_string(),
-                weight: 0.1,
-                duration: 1.0,
-            })
+            .map(|_| Route::default())
             .collect();
 
         Ok(RouteResponse {
@@ -97,26 +83,13 @@ impl OsrmEngine {
     }
 
     pub fn trip(&self, trip_request: TripRequest) -> Result<TripResponse, OsrmError> {
-        let len = trip_request.points.len();
-        if len == 0 {
+        if trip_request.points.len() < 2 {
             return Err(OsrmError::InvalidRouteRequest);
         }
         let trips: Vec<Route> = trip_request
             .points
             .windows(2)
-            .map(|_| Route {
-                legs: vec![Leg {
-                    steps: vec![Step {}],
-                    weight: 0.1,
-                    summary: "Mock summary".to_string(),
-                    duration: 1.0,
-                    distance: 1.0,
-                }],
-                weight_name: "Mock weight".to_string(),
-                geometry: "Mock polyline".to_string(),
-                weight: 0.1,
-                duration: 1.0,
-            })
+            .map(|_| Route::default())
             .collect();
 
         Ok(TripResponse {

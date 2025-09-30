@@ -1,10 +1,8 @@
-use itertools::Itertools;
-
 use crate::request_types::OverviewZoom;
-use crate::waypoints::Waypoint;
 use crate::{point::Point, request_types::GeometryType};
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub struct RouteRequest<'a> {
     pub points: &'a [Point],
     pub alternatives: bool,
@@ -29,18 +27,18 @@ impl<'a> RouteRequest<'a> {
             continue_straight: true,
         })
     }
-    pub fn with_alternatives(mut self, val: bool) -> Self {
-        self.alternatives = val;
+    pub fn with_alternatives(mut self) -> Self {
+        self.alternatives = true;
         self
     }
 
-    pub fn with_steps(mut self, val: bool) -> Self {
-        self.steps = val;
+    pub fn with_steps(mut self) -> Self {
+        self.steps = true;
         self
     }
 
-    pub fn with_annotations(mut self, val: bool) -> Self {
-        self.annotations = val;
+    pub fn with_annotations(mut self) -> Self {
+        self.annotations = true;
         self
     }
 
@@ -54,8 +52,8 @@ impl<'a> RouteRequest<'a> {
         self
     }
 
-    pub fn with_continue_straight(mut self, val: bool) -> Self {
-        self.continue_straight = val;
+    pub fn with_continue_straight(mut self) -> Self {
+        self.continue_straight = true;
         self
     }
 }
@@ -71,65 +69,3 @@ pub struct SimpleRouteResponse {
     pub durations: f64,
     pub distance: f64,
 }
-
-#[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(
-    any(feature = "native", feature = "remote"),
-    derive(serde::Deserialize)
-)]
-#[allow(dead_code)]
-pub struct RouteResponse {
-    pub code: String,
-    pub routes: Vec<Route>,
-    pub waypoints: Vec<Waypoint>,
-}
-
-impl RouteResponse {
-    pub fn full_geometry(&self) -> String {
-        self.routes.iter().map(|r| r.geometry.clone()).join("")
-    }
-}
-
-#[cfg_attr(
-    any(feature = "native", feature = "remote"),
-    derive(serde::Deserialize)
-)]
-#[cfg_attr(feature = "debug", derive(Debug))]
-pub struct OsrmResponse {
-    pub code: String,
-    pub routes: Vec<Route>,
-    pub waypoints: Vec<Waypoint>,
-}
-
-#[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(
-    any(feature = "native", feature = "remote"),
-    derive(serde::Deserialize)
-)]
-pub struct Route {
-    pub legs: Vec<Leg>,
-    pub weight_name: String,
-    pub geometry: String,
-    pub weight: f64,
-    pub duration: f64,
-}
-
-#[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(
-    any(feature = "native", feature = "remote"),
-    derive(serde::Deserialize)
-)]
-pub struct Leg {
-    pub steps: Vec<Step>,
-    pub weight: f64,
-    pub summary: String,
-    pub duration: f64,
-    pub distance: f64,
-}
-
-#[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(
-    any(feature = "native", feature = "remote"),
-    derive(serde::Deserialize)
-)]
-pub struct Step {}

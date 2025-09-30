@@ -5,19 +5,6 @@ pub(crate) use crate::point::Point;
     any(feature = "native", feature = "remote"),
     derive(serde::Deserialize)
 )]
-#[allow(dead_code)]
-pub struct TableResponse {
-    pub code: String,
-    pub destinations: Vec<TableLocationEntry>,
-    pub durations: Vec<Vec<Option<f64>>>,
-    pub sources: Vec<TableLocationEntry>,
-}
-
-#[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(
-    any(feature = "native", feature = "remote"),
-    derive(serde::Deserialize)
-)]
 pub struct TableLocationEntry {
     pub hint: String,
     pub location: [f64; 2],

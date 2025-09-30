@@ -11,11 +11,14 @@ fn test_basic_remote_route() {
 
     let points = [
         Point::new(48.040437, 10.316550).expect("Invalid point"),
+        Point::new(49.006101, 10.052887).expect("Invalid point"),
         Point::new(49.006101, 9.052887).expect("Invalid point"),
         Point::new(48.942296, 10.510960).expect("Invalid point"),
         Point::new(51.248931, 7.594814).expect("Invalid point"),
     ];
-    let route_request = RouteRequest::new(&points).expect("No points in request");
+    let route_request = RouteRequest::new(&points)
+        .expect("No points in request")
+        .with_geometry(osrm_interface::request_types::GeometryType::GeoJSON);
 
     let response = engine
         .route(&route_request)
@@ -39,7 +42,9 @@ fn test_basic_remote_trip() {
         Point::new(48.942296, 10.510960).expect("Invalid point"),
         Point::new(51.248931, 7.594814).expect("Invalid point"),
     ];
-    let trip_request = TripRequest::new(&points).expect("No points in trip request");
+    let trip_request = TripRequest::new(&points)
+        .expect("No points in trip request")
+        .with_geometry(osrm_interface::request_types::GeometryType::GeoJSON);
 
     let trip_response = engine.trip(&trip_request).expect("Failed navigate trip");
 
