@@ -2,10 +2,9 @@ use crate::algorithm;
 use crate::errors::{NativeOsrmError, OsrmError};
 use crate::native::Osrm;
 use crate::point::Point;
-use crate::route::{RouteRequest, SimpleRouteResponse};
-use crate::service_responses::{RouteResponse, TableResponse, TripResponse};
-use crate::tables::TableRequest;
-use crate::trip::TripRequest;
+use crate::route::{RouteRequest, RouteResponse, SimpleRouteResponse};
+use crate::tables::{TableRequest, TableResponse};
+use crate::trip::{TripRequest, TripResponse};
 
 pub struct OsrmEngine {
     instance: Osrm,
