@@ -3,7 +3,13 @@
 mod common;
 use common::init_native_engine;
 
-use osrm_interface::{point::Point, route::RouteRequest, trip::TripRequest};
+use osrm_interface::{
+    osrm_response_types::Geometry,
+    point::Point,
+    request_types::{GeometryType, OverviewZoom},
+    route::RouteRequest,
+    trip::TripRequest,
+};
 use rand::Rng;
 
 #[test]
@@ -167,4 +173,49 @@ fn test_native_route_annotations() {
             .is_some(),
         "Response should have annotations"
     )
+}
+
+#[test]
+fn test_native_route_geometries() {
+    let engine = init_native_engine(".env");
+
+    let points = [
+        Point::new(48.040437, 10.316550).expect("Invalid point"),
+        Point::new(49.006101, 9.052887).expect("Invalid point"),
+    ];
+    let route_request = RouteRequest::new(&points)
+        .expect("No points in request")
+        .with_geometry(GeometryType::GeoJSON)
+        .with_overview(OverviewZoom::Full);
+
+    let response = engine
+        .route(&route_request)
+        .expect("Failed to route request");
+
+    assert_eq!(response.code, "Ok", "Response code is not 'Ok'");
+    assert!(
+        matches!(
+            response.routes.first().unwrap().geometry,
+            Some(Geometry::GeoJson(_))
+        ),
+        "Geometry should be GeoJson"
+    );
+
+    let route_request = RouteRequest::new(&points)
+        .expect("No points in request")
+        .with_geometry(GeometryType::Polyline6)
+        .with_overview(OverviewZoom::Full);
+
+    let response = engine
+        .route(&route_request)
+        .expect("Failed to route request");
+
+    assert_eq!(response.code, "Ok", "Response code is not 'Ok'");
+    assert!(
+        matches!(
+            response.routes.first().unwrap().geometry,
+            Some(Geometry::Polyline(_))
+        ),
+        "Geometry should be Polyline"
+    );
 }

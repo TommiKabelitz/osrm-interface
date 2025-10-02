@@ -77,10 +77,11 @@ impl OsrmEngine {
             .call()
             .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))?
             .into_body()
-            .read_json::<RouteResponse>()
+            .read_to_string()
             .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))?;
 
-        Ok(response)
+        serde_json::from_str::<RouteResponse>(&response)
+            .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))
     }
 
     pub fn trip(&self, trip_request: &TripRequest) -> Result<TripResponse, OsrmError> {
@@ -107,10 +108,11 @@ impl OsrmEngine {
             .call()
             .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))?
             .into_body()
-            .read_json::<TripResponse>()
+            .read_to_string()
             .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))?;
 
-        Ok(response)
+        serde_json::from_str::<TripResponse>(&response)
+            .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))
     }
 
     pub fn simple_route(&self, from: Point, to: Point) -> Result<SimpleRouteResponse, OsrmError> {

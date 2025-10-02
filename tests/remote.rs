@@ -3,7 +3,13 @@
 mod common;
 use common::init_remote_engine;
 
-use osrm_interface::{point::Point, route::RouteRequest, trip::TripRequest};
+use osrm_interface::{
+    osrm_response_types::Geometry,
+    point::Point,
+    request_types::{GeometryType, OverviewZoom},
+    route::RouteRequest,
+    trip::TripRequest,
+};
 
 #[test]
 fn test_basic_remote_route() {
@@ -27,7 +33,7 @@ fn test_basic_remote_route() {
     assert_eq!(response.code, "Ok", "Response code is not 'Ok'");
     assert_eq!(
         response.routes.iter().map(|r| r.legs.len()).sum::<usize>(),
-        3,
+        points.len() - 1,
         "Route response length is incorrect"
     )
 }
@@ -58,4 +64,49 @@ fn test_basic_remote_trip() {
         points.len(),
         "Route response length is incorrect"
     )
+}
+
+#[test]
+fn test_native_route_geometries() {
+    let engine = init_remote_engine(".env");
+
+    let points = [
+        Point::new(48.040437, 10.316550).expect("Invalid point"),
+        Point::new(49.006101, 9.052887).expect("Invalid point"),
+    ];
+    let route_request = RouteRequest::new(&points)
+        .expect("No points in request")
+        .with_geometry(GeometryType::GeoJSON)
+        .with_overview(OverviewZoom::Full);
+
+    let response = engine
+        .route(&route_request)
+        .expect("Failed to route request");
+
+    assert_eq!(response.code, "Ok", "Response code is not 'Ok'");
+    assert!(
+        matches!(
+            response.routes.first().unwrap().geometry,
+            Some(Geometry::GeoJson(_))
+        ),
+        "Geometry should be GeoJson"
+    );
+
+    let route_request = RouteRequest::new(&points)
+        .expect("No points in request")
+        .with_geometry(GeometryType::Polyline6)
+        .with_overview(OverviewZoom::Full);
+
+    let response = engine
+        .route(&route_request)
+        .expect("Failed to route request");
+
+    assert_eq!(response.code, "Ok", "Response code is not 'Ok'");
+    assert!(
+        matches!(
+            response.routes.first().unwrap().geometry,
+            Some(Geometry::Polyline(_))
+        ),
+        "Geometry should be Polyline"
+    );
 }

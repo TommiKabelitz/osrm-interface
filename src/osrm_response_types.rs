@@ -48,6 +48,11 @@ impl Default for Route {
 /// Represents the geometry of a route or route step, either as a compact
 /// polyline string or as a structured GeoJSON LineString.
 #[cfg_attr(feature = "debug", derive(Debug))]
+// #[cfg_attr(
+//     any(feature = "native", feature = "remote"),
+//     derive(serde::Deserialize)
+// )]
+// #[cfg_attr(any(feature = "native", feature = "remote"), serde(untagged))]
 pub enum Geometry {
     /// Encoded polyline string (precision 5 or 6 depending on request)
     Polyline(String),
@@ -55,12 +60,10 @@ pub enum Geometry {
     GeoJson(GeoJsonLineString),
 }
 
-// The implementation from an approach point of view when adding support
-// for flatbuffers
+// The approach of this implementation may need to change when support
+// for flatbuffers is added
 #[cfg(any(feature = "native", feature = "remote"))]
 impl<'de> serde::Deserialize<'de> for Geometry {
-                
-
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -70,7 +73,7 @@ impl<'de> serde::Deserialize<'de> for Geometry {
 
         if trimmed.starts_with('{') {
             Ok(Geometry::GeoJson(
-                serde_json::from_str(trimmed).map_err(|e| 
+                serde_json::from_str(trimmed).map_err(|e|
                     match e.classify() {
                         serde_json::error::Category::Syntax => {
                             let index = crate::get_index_of_line_col(trimmed, e.line(), e.column()).unwrap();
@@ -90,18 +93,28 @@ impl<'de> serde::Deserialize<'de> for Geometry {
                 )?),
             )
         } else if trimmed.starts_with('\"') {
-            Ok(Geometry::Polyline(
-                serde_json::from_str(trimmed).map_err(|e|
-                    match e.classify() {
-                        serde_json::error::Category::Eof => {
-                            let len = trimmed.len();
-                            serde::de::Error::custom(format!("Reached end of file while parsing GeoJson. Start: {}, End: {}",
+            Ok(Geometry::Polyline(serde_json::from_str(trimmed).map_err(
+                |e| match e.classify() {
+                    serde_json::error::Category::Eof => {
+                        let len = trimmed.len();
+                        serde::de::Error::custom(format!(
+                            "Reached end of file while parsing GeoJson. Start: {}, End: {}",
                             trimmed.get(..10.min(len)).unwrap(),
-                            trimmed.get(len.saturating_sub(10)..).unwrap()))
-                        }
-                        e => serde::de::Error::custom(format!("{:?}",e)),
+                            trimmed.get(len.saturating_sub(10)..).unwrap()
+                        ))
                     }
-                )?,
+                    e => serde::de::Error::custom(format!("{:?}", e)),
+                },
+            )?))
+        // Want to ensure we can deserialize, even if we have json inside a string with the " in
+        // the json escaped. In that case, the string will start with a \". It could have whitespace
+        // after that, but just assuming it doesn't right now
+        } else if trimmed.starts_with("\"{") {
+            let inner: String = serde_json::from_str(trimmed).map_err(serde::de::Error::custom)?;
+
+            // Then parse the unescaped JSON
+            Ok(Geometry::GeoJson(
+                serde_json::from_str(&inner).map_err(serde::de::Error::custom)?,
             ))
         } else {
             Err(serde::de::Error::custom(
@@ -201,7 +214,7 @@ pub struct Annotation {
     pub datasources: Vec<u64>,
     /// The OSM node ID for each coordinate along the route, excluding the
     /// first/last user-supplied coordinates.
-    pub nodes: Vec<u64>,
+    pub nodes: Vec<f64>,
     /// The weights between each pair of coordinates.
     /// Does not include any turn costs.
     pub weight: Vec<f64>,
@@ -217,7 +230,9 @@ impl Default for Annotation {
             distance: vec![5.0, 5.0, 10.0, 5.0, 5.0],
             duration: vec![15.0, 15.0, 40.0, 15.0, 15.0],
             datasources: vec![1, 0, 0, 0, 1],
-            nodes: vec![49772551, 49772552, 49786799, 49786800, 49786801, 49786802],
+            nodes: vec![
+                49772551.0, 49772552.0, 49786799.0, 49786800.0, 49786801.0, 49786802.0,
+            ],
             weight: vec![15.0, 15.0, 40.0, 15.0, 15.0],
             speed: vec![], // not present in example, so empty
             metadata: Metadata::default(),
@@ -349,17 +364,17 @@ pub struct Intersection {
     /// These describe all available roads at the intersection.
     pub bearings: Vec<u16>,
     /// Classes of the roads exiting the intersection (as specified in the routing profile).
-    pub classes: Vec<String>,
+    pub classes: Option<Vec<String>>,
     /// List of entry flags, corresponding 1:1 with `bearings`.
     /// `true` indicates the road can be entered on a valid route,
     /// `false` indicates a restriction.
     pub entry: Vec<bool>,
     /// Index into bearings/entry array for the incoming road.
     /// Used to calculate the bearing just before the turn. Not supplied for `depart`.
-    pub r#in: usize,
+    pub r#in: Option<usize>,
     /// Index into bearings/entry array for the outgoing road.
     /// Used to extract the bearing just after the turn. Not supplied for `arrive`.
-    pub out: usize,
+    pub out: Option<usize>,
     /// Array of `Lane` objects that denote the available turn lanes at the intersection.
     /// If no lane information is available, this is `None`.
     pub lanes: Option<Vec<Lane>>,
@@ -370,10 +385,10 @@ impl Default for Intersection {
         Self {
             location: [13.394718, 52.543096],
             bearings: vec![60, 150, 240, 330],
-            classes: vec!["toll".to_string(), "restricted".to_string()],
+            classes: Some(vec!["toll".to_string(), "restricted".to_string()]),
             entry: vec![false, true, true, true],
-            r#in: 0,
-            out: 2,
+            r#in: Some(0),
+            out: Some(2),
             lanes: Some(vec![Lane::default()]),
         }
     }
