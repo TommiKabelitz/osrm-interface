@@ -1,3 +1,4 @@
+use crate::osrm_response_types::{Route, Waypoint};
 use crate::request_types::OverviewZoom;
 use crate::{point::Point, request_types::GeometryType};
 
@@ -56,6 +57,18 @@ impl<'a> RouteRequest<'a> {
         self.continue_straight = true;
         self
     }
+}
+
+#[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(
+    any(feature = "native", feature = "remote"),
+    derive(serde::Deserialize)
+)]
+#[allow(dead_code)]
+pub struct RouteResponse {
+    pub code: String,
+    pub routes: Vec<Route>,
+    pub waypoints: Vec<Waypoint>,
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]

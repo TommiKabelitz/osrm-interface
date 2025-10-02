@@ -4,7 +4,6 @@ pub mod osrm_response_types;
 pub mod point;
 pub mod request_types;
 pub mod route;
-pub mod service_responses;
 mod str_ops;
 pub mod tables;
 pub mod trip;

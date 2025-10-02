@@ -30,3 +30,16 @@ impl<'a> TableRequest<'a> {
         })
     }
 }
+
+#[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(
+    any(feature = "native", feature = "remote"),
+    derive(serde::Deserialize)
+)]
+#[allow(dead_code)]
+pub struct TableResponse {
+    pub code: String,
+    pub destinations: Vec<TableLocationEntry>,
+    pub durations: Vec<Vec<Option<f64>>>,
+    pub sources: Vec<TableLocationEntry>,
+}

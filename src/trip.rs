@@ -1,4 +1,5 @@
 use crate::{
+    osrm_response_types::{Route, Waypoint},
     point::Point,
     request_types::{GeometryType, OverviewZoom},
 };
@@ -45,4 +46,15 @@ impl<'a> TripRequest<'a> {
         self.overview = val;
         self
     }
+}
+
+#[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(
+    any(feature = "native", feature = "remote"),
+    derive(serde::Deserialize)
+)]
+pub struct TripResponse {
+    pub code: String,
+    pub trips: Vec<Route>,
+    pub waypoints: Vec<Waypoint>,
 }
