@@ -51,7 +51,6 @@ impl OsrmEngine {
             .instance
             .route(route_request)
             .map_err(|e| OsrmError::Native(NativeOsrmError::FfiError(e)))?;
-        println!("{}", result);
         serde_json::from_str::<RouteResponse>(&result)
             .map_err(|e| OsrmError::Native(NativeOsrmError::JsonParse(Box::new(e))))
     }
