@@ -88,7 +88,7 @@ void serialize_value(std::ostringstream &oss, const osrm::json::Value &v)
     }
     else if (auto p = std::get_if<osrm::json::Number>(&v))
     {
-        oss << p->value;
+        oss << std::setprecision(10) << std::defaultfloat << p->value;
     }
     else if (std::get_if<osrm::json::True>(&v))
     {

@@ -1,6 +1,7 @@
 use itertools::Itertools;
 
 use crate::errors::{OsrmError, RemoteOsrmError};
+use crate::nearest::NearestResponse;
 use crate::point::Point;
 use crate::request_types::Profile;
 use crate::route::{RouteRequest, RouteResponse, SimpleRouteResponse};
@@ -139,5 +140,25 @@ impl OsrmEngine {
                 .map(|l| l.duration)
                 .sum(),
         })
+    }
+
+    pub fn nearest(&self, point: &Point, number: u64) -> Result<NearestResponse, OsrmError> {
+        let url = format!(
+            "{}/nearest/v1/{}/{:.6},{:.6}?number={}",
+            self.endpoint,
+            self.profile.url_form(),
+            point.longitude(),
+            point.latitude(),
+            number,
+        );
+        let response = ureq::get(url)
+            .call()
+            .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))?
+            .into_body()
+            .read_to_string()
+            .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))?;
+
+        serde_json::from_str::<NearestResponse>(&response)
+            .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))
     }
 }

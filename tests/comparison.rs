@@ -69,3 +69,40 @@ fn test_native_and_remote_route() {
         "Durations differ by more than 5 seconds"
     );
 }
+
+#[test]
+fn test_compare_nearest() {
+    let remote_engine = init_remote_engine(".env");
+    let native_engine = init_native_engine(".env");
+    let num_points = 3;
+
+    let point = Point::new(48.040437, 10.316550).expect("Invalid point");
+    let remote_response = remote_engine
+        .nearest(&point, num_points)
+        .expect("Failed to find nearest");
+    let native_response = native_engine
+        .nearest(&point, num_points)
+        .expect("Failed to find nearest");
+
+    assert_eq!(
+        remote_response.code, native_response.code,
+        "Responses returned different codes"
+    );
+    assert_eq!(
+        remote_response.waypoints.len(),
+        native_response.waypoints.len(),
+        "Responses returned different number of waypoints"
+    );
+
+    assert!(
+        remote_response
+            .waypoints
+            .iter()
+            .zip(native_response.waypoints.iter())
+            .any(|(w_r, w_n)| {
+                (w_r.location[0] - w_n.location[0]).abs() < 1e-6
+                    && (w_r.location[1] - w_n.location[1]).abs() < 1e-6
+            }),
+        "Responses have different snapped locations"
+    )
+}
