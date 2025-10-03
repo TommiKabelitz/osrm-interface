@@ -4,6 +4,7 @@
 #include <osrm/json_container.hpp>
 #include <osrm/route_parameters.hpp>
 #include <osrm/trip_parameters.hpp>
+#include <osrm/nearest_parameters.hpp>
 #include "json/json_serialiser.cpp"
 // #include <mapbox/variant.hpp>
 
@@ -237,6 +238,59 @@ extern "C"
 
         osrm::json::Object result;
         const auto status = osrm_ptr->Trip(params, result);
+
+        std::ostringstream oss;
+        std::string result_str;
+        int code;
+
+        if (status == osrm::Status::Ok)
+        {
+            code = 0;
+            serialize_object(oss, result);
+            result_str = oss.str();
+        }
+        else
+        {
+            code = 1;
+            try
+            {
+                result_str = std::get<osrm::util::json::String>(result.values.at("message")).value;
+            }
+            catch (const std::exception &e)
+            {
+                result_str = "Unknown OSRM error";
+            }
+        }
+
+        char *message = new char[result_str.length() + 1];
+        strcpy(message, result_str.c_str());
+
+        return {code, message};
+    }
+
+    OSRM_Result osrm_nearest(void *osrm_instance,
+                             const double longitude,
+                             const double latitude,
+                             uint64_t num_coordinates)
+    {
+
+        if (!osrm_instance)
+        {
+            const char *err = "OSRM instance not found";
+            char *msg = new char[strlen(err) + 1];
+            strcpy(msg, err);
+            return {1, msg};
+        }
+
+        osrm::OSRM *osrm_ptr = static_cast<osrm::OSRM *>(osrm_instance);
+        osrm::NearestParameters params;
+
+        params.number_of_results = num_coordinates;
+        params.coordinates.push_back({osrm::util::FloatLongitude{longitude},
+                                      osrm::util::FloatLatitude{latitude}});
+
+        osrm::json::Object result;
+        const auto status = osrm_ptr->Nearest(params, result);
 
         std::ostringstream oss;
         std::string result_str;

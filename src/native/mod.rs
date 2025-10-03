@@ -46,6 +46,8 @@ unsafe extern "C" {
         flags: u8,
     ) -> OsrmResult;
 
+    fn osrm_nearest(osrm_instance: *mut c_void, long: f64, lat: f64, number: u64) -> OsrmResult;
+
     fn osrm_last_error() -> *const c_char;
     fn osrm_free_string(s: *mut c_char);
 }
@@ -174,6 +176,28 @@ impl Osrm {
                 dests_vec.len(),
             )
         };
+
+        let message_ptr = result.message;
+        if message_ptr.is_null() {
+            return Err("OSRM returned a null message".to_string());
+        }
+
+        let c_str = unsafe { CStr::from_ptr(message_ptr) };
+        let rust_str = c_str.to_str().map_err(|e| e.to_string())?.to_owned();
+
+        unsafe {
+            osrm_free_string(message_ptr);
+        }
+
+        if result.code != 0 {
+            return Err(format!("OSRM error: {}", rust_str));
+        }
+
+        Ok(rust_str)
+    }
+
+    pub(crate) fn nearest(&self, long: f64, lat: f64, number: u64) -> Result<String, String> {
+        let result = unsafe { osrm_nearest(self.instance, long, lat, number) };
 
         let message_ptr = result.message;
         if message_ptr.is_null() {

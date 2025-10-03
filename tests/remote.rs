@@ -110,3 +110,21 @@ fn test_native_route_geometries() {
         "Geometry should be Polyline"
     );
 }
+
+#[test]
+fn test_remote_nearest() {
+    let engine = init_remote_engine(".env");
+
+    let num_points = 3;
+    let point = Point::new(48.040437, 10.316550).expect("Invalid point");
+    let response = engine
+        .nearest(&point, num_points)
+        .expect("Failed to find nearest");
+
+    assert_eq!(response.code, "Ok", "Response code is not 'Ok'");
+    assert_eq!(
+        response.waypoints.len(),
+        num_points as usize,
+        "Nearest returned the wrong number of points"
+    );
+}

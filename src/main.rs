@@ -10,47 +10,17 @@ use osrm_interface::{
 fn main() {
     #[cfg(feature = "native")]
     {
-        let engine = init_native_engine(".env");
+        let native_engine = init_native_engine(".env");
+        let num_points = 3;
 
-        let points = [
-            Point::new(48.040437, 10.316550).expect("Invalid point"),
-            Point::new(49.006101, 9.052887).expect("Invalid point"),
-        ];
-        let route_request = RouteRequest::new(&points)
-            .expect("No points in request")
-            .with_geometry(GeometryType::GeoJSON)
-            .with_overview(OverviewZoom::Full);
+        let point = Point::new(48.040437, 10.316550).expect("Invalid point");
+        let native_response = native_engine
+            .nearest(&point, num_points)
+            .expect("Failed to find nearest");
 
-        let response = engine
-            .route(&route_request)
-            .expect("Failed to route request");
-
-        assert_eq!(response.code, "Ok", "Response code is not 'Ok'");
-        assert!(
-            matches!(
-                response.routes.first().unwrap().geometry,
-                Some(Geometry::GeoJson(_))
-            ),
-            "Geometry should be GeoJson"
-        );
-
-        let route_request = RouteRequest::new(&points)
-            .expect("No points in request")
-            .with_geometry(GeometryType::Polyline6)
-            .with_overview(OverviewZoom::Full);
-
-        let response = engine
-            .route(&route_request)
-            .expect("Failed to route request");
-
-        assert_eq!(response.code, "Ok", "Response code is not 'Ok'");
-        assert!(
-            matches!(
-                response.routes.first().unwrap().geometry,
-                Some(Geometry::Polyline(_))
-            ),
-            "Geometry should be Polyline"
-        );
+        for waypoint in native_response.waypoints {
+            println!("{} {:?}", waypoint.hint, waypoint.location);
+        }
     }
 
     #[cfg(feature = "remote")]
