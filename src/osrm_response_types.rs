@@ -623,3 +623,90 @@ pub enum Direction {
     /// Fallback for unknown or future direction strings not explicitly listed.
     Other,
 }
+
+/// The object is used to describe the waypoint on a route returned from the match
+/// service.
+#[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(
+    any(feature = "native", feature = "remote"),
+    derive(serde::Deserialize)
+)]
+pub struct MatchWaypoint {
+    /// Unique internal identifier of the segment (ephemeral, not constant over data
+    /// updates) This can be used on subsequent requests to significantly speed up the
+    /// query and to connect multiple services. E.g. you can use the `hint` value
+    /// obtained by the `nearest` query as `hint` values for `route` inputs.
+    pub hint: String,
+    /// Array that contains the [longitude, latitude] pair of the snapped coordinate
+    pub location: [f64; 2],
+    /// Name of the street the coordinate snapped to
+    pub name: String,
+    /// The distance, in meters, from the input coordinate to the snapped coordinate
+    pub distance: f64,
+    /// Index to the `Route` object in `matchings` the sub-trace was matched to
+    pub matchings_index: u64,
+    /// Index of the waypoint inside the matched route
+    pub waypoint_index: u64,
+    /// Number of probable alternative matchings for this tracepoint. A value of zero indicates that this point was matched unambiguously. Split the trace at these points for incremental map matching
+    pub alternatives_count: u64,
+}
+
+impl Default for MatchWaypoint {
+    fn default() -> Self {
+        Self {
+            hint:
+                "KSoKADRYroqUBAEAEAAAABkAAAAGAAAAAAAAABhnCQCLtwAA_0vMAKlYIQM8TMwArVghAwEAAQH1a66g"
+                    .to_string(),
+            location: [13.388799, 52.517033],
+            distance: 4.152629,
+            name: "Friedrichstraße".to_string(),
+            matchings_index: 0,
+            waypoint_index: 0,
+            alternatives_count: 0,
+        }
+    }
+}
+
+/// Represents a route through (potentially multiple) waypoints.
+#[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(
+    any(feature = "native", feature = "remote"),
+    derive(serde::Deserialize)
+)]
+pub struct MatchRoute {
+    /// The distance traveled by the route, in meters.
+    pub distance: f64,
+    /// The estimated travel time, in number of seconds.
+    pub duration: f64,
+    /// The whole geometry of the route value depending on the `overview` parameter,
+    /// format depending on the `geometries` parameter.
+    ///
+    /// | overview   | Description                                                                                   |
+    /// |------------|-----------------------------------------------------------------------------------------------|
+    /// | simplified | Geometry is simplified according to the highest zoom level it can still be displayed in full. |
+    /// | full       | Geometry is not simplified.                                                                   |
+    /// | false      | Geometry is not added.                                                                        |
+    pub geometry: Option<Geometry>,
+    /// The calculated weight of the route.
+    pub weight: f64,
+    /// The name of the weight profile used during the extraction phase.
+    pub weight_name: String,
+    /// The legs between the given waypoints, an array of `RouteLeg` objects.
+    pub legs: Vec<RouteLeg>,
+    /// Confidence of the matching. float value between 0 and 1. 1 is very confident that the matching is correct
+    pub confidence: f64,
+}
+
+impl Default for MatchRoute {
+    fn default() -> Self {
+        Self {
+            distance: 90.0,
+            duration: 300.0,
+            weight: 300.0,
+            weight_name: "duration".to_string(),
+            geometry: Some(Geometry::GeoJson(GeoJsonLineString::default())),
+            legs: vec![RouteLeg::default(), RouteLeg::default()],
+            confidence: 1.0,
+        }
+    }
+}

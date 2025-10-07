@@ -4,6 +4,7 @@ mod common;
 use common::init_native_engine;
 
 use osrm_interface::{
+    r#match::MatchRequest,
     osrm_response_types::Geometry,
     point::Point,
     request_types::{GeometryType, OverviewZoom},
@@ -304,4 +305,41 @@ fn test_table_options() {
     );
     assert!(response.distances.is_some(), "Distances should be Some");
     assert!(response.durations.is_some(), "Durations should be Some");
+}
+
+#[test]
+fn test_match_basic() {
+    let engine = init_native_engine(".env");
+
+    let points = [
+        Point::new(51.097683869065804, 11.517827906178626).expect("Invalid point"),
+        Point::new(51.098737989249116, 11.526971690952534).expect("Invalid point"),
+        Point::new(51.09937599770893, 11.530571780087442).expect("Invalid point"),
+        Point::new(51.099195691869646, 11.535806265573953).expect("Invalid point"),
+        Point::new(51.09883507808152, 11.541924208526543).expect("Invalid point"),
+        Point::new(51.10019429998817, 11.547070348266445).expect("Invalid point"),
+        Point::new(51.10187286817584, 11.549241921250635).expect("Invalid point"),
+        Point::new(51.10307204569769, 11.561966320703071).expect("Invalid point"),
+    ];
+
+    let match_request = MatchRequest::new(&points)
+        .expect("Failed to create match request")
+        .with_geometry(GeometryType::Polyline)
+        .with_overview(OverviewZoom::Full)
+        .with_gaps(osrm_interface::r#match::MatchGapsBehaviour::Ignore);
+    let response = engine
+        .r#match(&match_request)
+        .expect("Failed to match route");
+
+    assert_eq!(response.code, "Ok", "Response code is not 'Ok'");
+    println!(
+        "{:?}",
+        response
+            .matchings
+            .first()
+            .unwrap()
+            .geometry
+            .as_ref()
+            .unwrap()
+    );
 }

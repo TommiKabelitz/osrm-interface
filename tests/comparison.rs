@@ -3,7 +3,13 @@
 mod common;
 use common::{init_native_engine, init_remote_engine};
 
-use osrm_interface::{point::Point, route::RouteRequest};
+use osrm_interface::{
+    r#match::MatchRequest,
+    osrm_response_types::Geometry,
+    point::Point,
+    request_types::{GeometryType, OverviewZoom},
+    route::RouteRequest,
+};
 use rand::Rng;
 
 #[test]
@@ -105,4 +111,66 @@ fn test_compare_nearest() {
             }),
         "Responses have different snapped locations"
     )
+}
+
+#[test]
+fn test_compare_match() {
+    let remote_engine = init_remote_engine(".env");
+    let native_engine = init_native_engine(".env");
+
+    let points = [
+        Point::new(51.097683869065804, 11.517827906178626).expect("Invalid point"),
+        Point::new(51.098737989249116, 11.526971690952534).expect("Invalid point"),
+        Point::new(51.09937599770893, 11.530571780087442).expect("Invalid point"),
+        Point::new(51.099195691869646, 11.535806265573953).expect("Invalid point"),
+        Point::new(51.09883507808152, 11.541924208526543).expect("Invalid point"),
+        Point::new(51.10019429998817, 11.547070348266445).expect("Invalid point"),
+        Point::new(51.10187286817584, 11.549241921250635).expect("Invalid point"),
+        Point::new(51.10307204569769, 11.561966320703071).expect("Invalid point"),
+    ];
+
+    let match_request = MatchRequest::new(&points)
+        .expect("Failed to create match request")
+        .with_geometry(GeometryType::Polyline)
+        .with_overview(OverviewZoom::Full)
+        .with_gaps(osrm_interface::r#match::MatchGapsBehaviour::Ignore);
+    let remote_response = remote_engine
+        .r#match(&match_request)
+        .expect("Failed to match route");
+    let native_response = native_engine
+        .r#match(&match_request)
+        .expect("Failed to match route");
+
+    assert_eq!(
+        remote_response.code, "Ok",
+        "Remote response code is not 'Ok'"
+    );
+    assert_eq!(
+        native_response.code, "Ok",
+        "Native response code is not 'Ok'"
+    );
+    let remote_polyline = if let Some(Geometry::Polyline(line)) = &remote_response
+        .matchings
+        .first()
+        .expect("No matching routes in remote response")
+        .geometry
+    {
+        line
+    } else {
+        panic!("Geometry should be polyline")
+    };
+    let native_polyline = if let Some(Geometry::Polyline(line)) = &native_response
+        .matchings
+        .first()
+        .expect("No matching routes in remote response")
+        .geometry
+    {
+        line
+    } else {
+        panic!("Geometry should be polyline")
+    };
+    assert_eq!(
+        remote_polyline, native_polyline,
+        "Polylines are not the same"
+    );
 }

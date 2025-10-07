@@ -1,5 +1,6 @@
 pub mod algorithm;
 pub mod errors;
+pub mod r#match;
 pub mod nearest;
 pub mod osrm_response_types;
 pub mod point;

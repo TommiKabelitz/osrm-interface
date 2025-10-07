@@ -3,14 +3,30 @@
 #include <osrm/engine_config.hpp>
 #include <osrm/json_container.hpp>
 #include <osrm/route_parameters.hpp>
+#include <osrm/match_parameters.hpp>
 #include <osrm/trip_parameters.hpp>
 #include <osrm/nearest_parameters.hpp>
 #include "json/json_serialiser.cpp"
-// #include <mapbox/variant.hpp>
 
 #include <string>
 #include <iostream>
 #include <cstdlib>
+
+// Should not extern uint8_t enums as the C ABI is different
+enum RouteFlags : uint8_t
+{
+    ROUTE_ALTERNATIVES = 1 << 0,
+    ROUTE_STEPS = 1 << 1,
+    ROUTE_ANNOTATIONS = 1 << 2,
+    ROUTE_CONTINUE_STRAIGHT = 1 << 3,
+};
+
+enum MatchFlags : uint8_t
+{
+    MATCH_TIDY = 1 << 0,
+    MATCH_STEPS = 1 << 1,
+    MATCH_ANNOTATIONS = 1 << 2,
+};
 
 extern "C"
 {
@@ -172,14 +188,6 @@ extern "C"
         return {code, message};
     }
 
-    enum RouteFlags : uint8_t
-    {
-        ROUTE_ALTERNATIVES = 1 << 0,
-        ROUTE_STEPS = 1 << 1,
-        ROUTE_ANNOTATIONS = 1 << 2,
-        ROUTE_CONTINUE_STRAIGHT = 1 << 3,
-    };
-
     OSRM_Result osrm_route(void *osrm_instance,
                            const double *coordinates,
                            size_t num_coordinates,
@@ -213,6 +221,120 @@ extern "C"
 
         osrm::json::Object result;
         const auto status = osrm_ptr->Route(params, result);
+
+        std::ostringstream oss;
+        std::string result_str;
+        int code;
+
+        if (status == osrm::Status::Ok)
+        {
+            code = 0;
+            serialize_object(oss, result);
+            result_str = oss.str();
+        }
+        else
+        {
+            code = 1;
+            try
+            {
+                result_str = std::get<osrm::util::json::String>(result.values.at("message")).value;
+            }
+            catch (const std::exception &e)
+            {
+                result_str = "Unknown OSRM error";
+            }
+        }
+
+        char *message = new char[result_str.length() + 1];
+        strcpy(message, result_str.c_str());
+
+        return {code, message};
+    }
+
+    enum class GapsType
+    {
+        Split = 0,
+        Ignore = 1
+    };
+
+    OSRM_Result osrm_match(void *osrm_instance,
+                           const double *coordinates,
+                           size_t num_coordinates,
+                           enum GeometryType geometry_type,
+                           enum OverviewZoom overview_zoom,
+                           const uint64_t *timestamps,
+                           size_t num_timestamps,
+                           const double *radiuses,
+                           size_t num_radiuses,
+                           enum GapsType gaps_type,
+                           const size_t *waypoints,
+                           size_t num_waypoints,
+                           uint8_t flags)
+    {
+        if (!osrm_instance)
+        {
+            const char *err = "OSRM instance not found";
+            char *msg = new char[strlen(err) + 1];
+            strcpy(msg, err);
+            return {1, msg};
+        }
+
+        osrm::OSRM *osrm_ptr = static_cast<osrm::OSRM *>(osrm_instance);
+        osrm::MatchParameters params;
+
+        for (size_t i = 0; i < num_coordinates; ++i)
+        {
+            params.coordinates.push_back({osrm::util::FloatLongitude{coordinates[i * 2]},
+                                          osrm::util::FloatLatitude{coordinates[i * 2 + 1]}});
+        }
+
+        params.geometries = static_cast<osrm::engine::api::RouteParameters::GeometriesType>(geometry_type);
+        params.overview = static_cast<osrm::engine::api::RouteParameters::OverviewType>(overview_zoom);
+        params.gaps = static_cast<osrm::engine::api::MatchParameters::GapsType>(gaps_type);
+        params.tidy = (flags & MATCH_TIDY) != 0;
+        params.steps = (flags & MATCH_STEPS) != 0;
+        params.annotations = (flags & MATCH_ANNOTATIONS) != 0;
+        if (num_timestamps > 0)
+        {
+            if (num_timestamps != num_coordinates)
+            {
+                const char *err = "num_timestamps must equal num_coordinates";
+                char *msg = new char[strlen(err) + 1];
+                strcpy(msg, err);
+                return {1, msg};
+            }
+            params.timestamps.reserve(num_timestamps);
+            for (size_t i = 0; i < num_timestamps; i++)
+            {
+                params.timestamps.push_back(timestamps[i]);
+            }
+        }
+        if (num_radiuses > 0)
+        {
+            if (num_radiuses != num_coordinates)
+            {
+                const char *err = "num_radiuses must equal num_coordinates";
+                char *msg = new char[strlen(err) + 1];
+                strcpy(msg, err);
+                return {1, msg};
+            }
+            params.radiuses.reserve(num_timestamps);
+            for (size_t i = 0; i < num_radiuses; i++)
+            {
+                params.radiuses.push_back(radiuses[i]);
+            }
+        }
+        if (num_waypoints > 0)
+        {
+            params.waypoints.reserve(num_waypoints);
+            for (size_t i = 0; i < num_waypoints; i++)
+            {
+                params.waypoints.push_back(waypoints[i]);
+            }
+        }
+
+        osrm::json::Object result;
+        const auto status = osrm_ptr->Match(params, result);
 
         std::ostringstream oss;
         std::string result_str;

@@ -26,6 +26,8 @@ pub enum RemoteOsrmError {
 pub enum OsrmError {
     #[error("Sources or destinations are invalid")]
     InvalidTableRequest,
+    #[error("Match request is invalid")]
+    InvalidMatchRequest,
     #[error("No points in request")]
     InvalidRouteRequest,
     #[error("No points in request")]

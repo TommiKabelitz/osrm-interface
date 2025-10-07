@@ -1,6 +1,7 @@
 use itertools::Itertools;
 
 use crate::errors::{OsrmError, RemoteOsrmError};
+use crate::r#match::{MatchGapsBehaviour, MatchRequest, MatchResponse};
 use crate::nearest::NearestResponse;
 use crate::point::Point;
 use crate::request_types::Profile;
@@ -72,10 +73,10 @@ impl OsrmEngine {
             .call()
             .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))?
             .into_body()
-            .read_json::<TableResponse>()
+            .read_to_string()
             .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))?;
-
-        Ok(response)
+        serde_json::from_str::<TableResponse>(&response)
+            .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))
     }
 
     pub fn route(&self, route_request: &RouteRequest) -> Result<RouteResponse, OsrmError> {
@@ -105,7 +106,6 @@ impl OsrmEngine {
             .into_body()
             .read_to_string()
             .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))?;
-
         serde_json::from_str::<RouteResponse>(&response)
             .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))
     }
@@ -136,7 +136,6 @@ impl OsrmEngine {
             .into_body()
             .read_to_string()
             .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))?;
-
         serde_json::from_str::<TripResponse>(&response)
             .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))
     }
@@ -183,8 +182,61 @@ impl OsrmEngine {
             .into_body()
             .read_to_string()
             .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))?;
-
         serde_json::from_str::<NearestResponse>(&response)
+            .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))
+    }
+
+    pub fn r#match(&self, match_request: &MatchRequest) -> Result<MatchResponse, OsrmError> {
+        if match_request.points.is_empty() {
+            return Err(OsrmError::InvalidMatchRequest);
+        }
+
+        // Collapsing the if requires an if let chain which requires
+        // rustc v1.88
+        #[allow(clippy::collapsible_if)]
+        if let MatchGapsBehaviour::Split = match_request.gaps {
+            if match_request.timestamps.is_none() {
+                return Err(OsrmError::InvalidMatchRequest);
+            }
+        }
+        let coordinates = match_request
+            .points
+            .iter()
+            .map(|p| format!("{:.6},{:.6}", p.longitude(), p.latitude()))
+            .join(";");
+
+        let mut url = format!(
+            "{}/match/v1/{}/{coordinates}?steps={}&geometries={}&overview={}&annotations={}&gaps={}&tidy={}",
+            self.endpoint,
+            self.profile.url_form(),
+            match_request.steps,
+            match_request.geometry.url_form(),
+            match_request.overview.url_form(),
+            match_request.annotations,
+            match_request.gaps.url_form(),
+            match_request.tidy
+        );
+
+        if let Some(timestamps) = match_request.timestamps {
+            let timestamps = timestamps.iter().map(|t| format!("{t}")).join(";");
+            url.push_str(&format!("&timestamps={}", timestamps));
+        }
+        if let Some(radiuses) = match_request.radiuses {
+            let radiuses = radiuses.iter().map(|r| format!("{r:.12}")).join(";");
+            url.push_str(&format!("&radiuses={}", radiuses));
+        }
+        if let Some(waypoints) = match_request.waypoints {
+            let waypoints = waypoints.iter().map(|w| format!("{w}")).join(";");
+            url.push_str(&format!("&waypoints={}", waypoints));
+        }
+
+        let response = ureq::get(url)
+            .call()
+            .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))?
+            .into_body()
+            .read_to_string()
+            .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))?;
+        serde_json::from_str::<MatchResponse>(&response)
             .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))
     }
 }

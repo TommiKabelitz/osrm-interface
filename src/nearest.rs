@@ -7,6 +7,8 @@ use crate::osrm_response_types::Waypoint;
 )]
 #[allow(dead_code)]
 pub struct NearestResponse {
+    /// If the request was successful "Ok" otherwise see the service dependent and general status codes.
     pub code: String,
+    /// Array of Waypoint objects sorted by distance to the input coordinate
     pub waypoints: Vec<Waypoint>,
 }

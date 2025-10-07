@@ -1,4 +1,5 @@
 mod osrm_engine;
+use crate::r#match::{MatchGapsBehaviour, MatchRequest};
 use crate::request_types::{GeometryType, OverviewZoom};
 use crate::route::RouteRequest;
 use crate::tables::{TableAnnotation, TableFallbackCoordinate};
@@ -11,6 +12,10 @@ const ROUTE_ALTERNATIVES: u8 = 1 << 0;
 const ROUTE_STEPS: u8 = 1 << 1;
 const ROUTE_ANNOTATIONS: u8 = 1 << 2;
 const ROUTE_CONTINUE_STRAIGHT: u8 = 1 << 3;
+
+const MATCH_TIDY: u8 = 1 << 0;
+const MATCH_STEPS: u8 = 1 << 1;
+const MATCH_ANNOTATIONS: u8 = 1 << 2;
 
 #[repr(C)]
 struct OsrmResult {
@@ -47,6 +52,22 @@ unsafe extern "C" {
         num_coordinates: usize,
         geometry_type: GeometryType,
         overview_zoom: OverviewZoom,
+        flags: u8,
+    ) -> OsrmResult;
+
+    fn osrm_match(
+        osrm_instance: *mut c_void,
+        coordinates: *const f64,
+        num_coordinates: usize,
+        geometry_type: GeometryType,
+        overview_zoom: OverviewZoom,
+        timestamps: *const u64,
+        num_timestamps: usize,
+        radiuses: *const f64,
+        num_radiuses: usize,
+        gaps_type: MatchGapsBehaviour,
+        waypoints: *const usize,
+        num_waypoints: usize,
         flags: u8,
     ) -> OsrmResult;
 
@@ -133,6 +154,65 @@ impl Osrm {
                 num_coords,
                 route_request.geometry,
                 route_request.overview,
+                flags,
+            )
+        };
+
+        let message_ptr = result.message;
+        if message_ptr.is_null() {
+            return Err("OSRM returned a null message".to_string());
+        }
+
+        let c_str = unsafe { CStr::from_ptr(message_ptr) };
+        let rust_str = c_str.to_str().map_err(|e| e.to_string())?.to_owned();
+
+        unsafe {
+            osrm_free_string(message_ptr);
+        }
+
+        if result.code != 0 {
+            return Err(format!("OSRM error: {}", rust_str));
+        }
+
+        Ok(rust_str)
+    }
+
+    pub(crate) fn r#match(&self, match_request: &MatchRequest) -> Result<String, String> {
+        let num_coords = match_request.points.len();
+        let coords: Vec<f64> = match_request
+            .points
+            .iter()
+            .flat_map(|p| [p.longitude(), p.latitude()])
+            .collect();
+
+        let mut flags: u8 = 0;
+        if match_request.tidy {
+            flags |= MATCH_TIDY;
+        }
+        if match_request.steps {
+            flags |= MATCH_STEPS;
+        }
+        if match_request.annotations {
+            flags |= MATCH_ANNOTATIONS;
+        }
+
+        let timestamps = match_request.timestamps.unwrap_or(&[]);
+        let radiuses = match_request.radiuses.unwrap_or(&[]);
+        let waypoints = match_request.waypoints.unwrap_or(&[]);
+        let result = unsafe {
+            osrm_match(
+                self.instance,
+                coords.as_ptr(),
+                num_coords,
+                match_request.geometry,
+                match_request.overview,
+                timestamps.as_ptr(),
+                timestamps.len(),
+                radiuses.as_ptr(),
+                radiuses.len(),
+                match_request.gaps,
+                waypoints.as_ptr(),
+                waypoints.len(),
                 flags,
             )
         };

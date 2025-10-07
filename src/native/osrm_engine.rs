@@ -1,5 +1,6 @@
 use crate::algorithm;
 use crate::errors::{NativeOsrmError, OsrmError};
+use crate::r#match::{MatchGapsBehaviour, MatchRequest, MatchResponse};
 use crate::native::Osrm;
 use crate::nearest::NearestResponse;
 use crate::point::Point;
@@ -146,5 +147,29 @@ impl OsrmEngine {
         let nearest_response = serde_json::from_str::<NearestResponse>(&result)
             .map_err(|e| OsrmError::Native(NativeOsrmError::JsonParse(Box::new(e))))?;
         Ok(nearest_response)
+    }
+
+    pub fn r#match(&self, match_request: &MatchRequest) -> Result<MatchResponse, OsrmError> {
+        if match_request.points.is_empty() {
+            return Err(OsrmError::InvalidMatchRequest);
+        }
+
+        // Collapsing the if requires an if let chain which requires
+        // rustc v1.88
+        #[allow(clippy::collapsible_if)]
+        if let MatchGapsBehaviour::Split = match_request.gaps {
+            if match_request.timestamps.is_none() {
+                return Err(OsrmError::InvalidMatchRequest);
+            }
+        }
+
+        let result = self
+            .instance
+            .r#match(match_request)
+            .map_err(|e| OsrmError::Native(NativeOsrmError::FfiError(e)))?;
+        let response = serde_json::from_str::<MatchResponse>(&result)
+            .map_err(|e| OsrmError::Native(NativeOsrmError::JsonParse(Box::new(e))))?;
+
+        Ok(response)
     }
 }
