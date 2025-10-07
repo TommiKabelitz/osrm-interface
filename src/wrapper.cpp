@@ -75,13 +75,31 @@ extern "C"
         }
     }
 
+    enum class FallbackCoordinateType
+    {
+        FallbackCoordinateType_Input = 0,
+        FallbackCoordinateType_Snapped = 1
+    };
+
+    enum class AnnotationsType
+    {
+        AnnotationsType_None = 0,
+        AnnotationsType_Duration = 0x01,
+        AnnotationsType_Distance = 0x02,
+        AnnotationsType_All = AnnotationsType_Duration | AnnotationsType_Distance
+    };
+
     OSRM_Result osrm_table(void *osrm_instance,
                            const double *coordinates,
                            size_t num_coordinates,
                            const size_t *sources,
                            size_t num_sources,
                            const size_t *destinations,
-                           size_t num_destinations)
+                           size_t num_destinations,
+                           enum AnnotationsType annotations,
+                           double fallback_speed,
+                           enum FallbackCoordinateType fallback_coordinate_type,
+                           double scale_factor)
     {
 
         if (!osrm_instance)
@@ -109,6 +127,17 @@ extern "C"
         if (num_destinations > 0)
         {
             params.destinations.assign(destinations, destinations + num_destinations);
+        }
+
+        params.annotations = static_cast<osrm::engine::api::TableParameters::AnnotationsType>(annotations);
+        if (fallback_speed > 0)
+        {
+            params.fallback_coordinate_type = static_cast<osrm::engine::api::TableParameters::FallbackCoordinateType>(fallback_coordinate_type);
+            params.fallback_speed = fallback_speed;
+        }
+        if (scale_factor > 0)
+        {
+            params.scale_factor = scale_factor;
         }
 
         osrm::json::Object result;

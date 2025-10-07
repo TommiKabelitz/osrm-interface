@@ -3,7 +3,7 @@ use crate::errors::OsrmError;
 use crate::osrm_response_types::{Route, Waypoint};
 use crate::point::Point;
 use crate::route::{RouteRequest, RouteResponse, SimpleRouteResponse};
-use crate::tables::{TableLocationEntry, TableRequest, TableResponse};
+use crate::tables::{TableAnnotation, TableLocationEntry, TableRequest, TableResponse};
 use crate::trip::{TripRequest, TripResponse};
 
 pub struct OsrmEngine {}
@@ -20,6 +20,8 @@ impl OsrmEngine {
             return Err(OsrmError::InvalidTableRequest);
         }
 
+        // Just lazily create both even if we don't need them
+        // because it is just the mocking function
         let durations: Vec<Vec<Option<f64>>> = (0..len_sources)
             .map(|i| {
                 (0..len_destinations)
@@ -27,6 +29,21 @@ impl OsrmEngine {
                     .collect()
             })
             .collect();
+
+        let distances: Vec<Vec<Option<f64>>> = (0..len_sources)
+            .map(|i| {
+                (0..len_destinations)
+                    .map(|j| Some(if i == j { 0.0 } else { 2.0 }))
+                    .collect()
+            })
+            .collect();
+
+        let (durations, distances) = match table_request.annotations {
+            TableAnnotation::All => (Some(durations), Some(distances)),
+            TableAnnotation::Distance => (None, Some(distances)),
+            TableAnnotation::Duration => (Some(durations), None),
+            TableAnnotation::None => (None, None),
+        };
 
         Ok(TableResponse {
             code: "Ok".to_string(),
@@ -51,6 +68,7 @@ impl OsrmEngine {
                 })
                 .collect(),
             durations,
+            distances,
         })
     }
 

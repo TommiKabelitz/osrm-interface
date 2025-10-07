@@ -4,7 +4,7 @@ use crate::native::Osrm;
 use crate::nearest::NearestResponse;
 use crate::point::Point;
 use crate::route::{RouteRequest, RouteResponse, SimpleRouteResponse};
-use crate::tables::{TableRequest, TableResponse};
+use crate::tables::{TableAnnotation, TableFallbackCoordinate, TableRequest, TableResponse};
 use crate::trip::{TripRequest, TripResponse};
 
 pub struct OsrmEngine {
@@ -34,9 +34,38 @@ impl OsrmEngine {
             .iter()
             .map(|s| (s.longitude(), s.latitude()))
             .collect::<Vec<(f64, f64)>>()[..];
+
+        // For consistency with osrm, want to ensure we mimic the backend's behaviour
+        // when speed should not be specified and the same for the scale factor. Hence,
+        // we set them to zero which tells the wrapper to not set the values and use
+        // osrm's built in defaults
+        let (fallback_coordinate_type, fallback_speed) = match (
+            table_request.fallback_coordinate,
+            table_request.fallback_speed,
+        ) {
+            (Some(coord), Some(speed)) => (coord, speed),
+            (None, None) => (TableFallbackCoordinate::Input, 0.0),
+            _ => return Err(OsrmError::InvalidTableRequest),
+        };
+        let scale_factor = match (table_request.scale_factor, table_request.annotations) {
+            (Some(scale), TableAnnotation::All | TableAnnotation::Duration) => scale,
+            (Some(_), TableAnnotation::None | TableAnnotation::Distance) => {
+                return Err(OsrmError::InvalidTableRequest);
+            }
+            (None, _) => 0.0,
+        };
+
         let result = self
             .instance
-            .table(coordinates, Some(sources_index), Some(destination_index))
+            .table(
+                coordinates,
+                Some(sources_index),
+                Some(destination_index),
+                table_request.annotations,
+                fallback_speed,
+                fallback_coordinate_type,
+                scale_factor,
+            )
             .map_err(|e| OsrmError::Native(NativeOsrmError::FfiError(e)))?;
         serde_json::from_str::<TableResponse>(&result)
             .map_err(|e| OsrmError::Native(NativeOsrmError::JsonParse(Box::new(e))))

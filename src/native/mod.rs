@@ -1,6 +1,7 @@
 mod osrm_engine;
 use crate::request_types::{GeometryType, OverviewZoom};
 use crate::route::RouteRequest;
+use crate::tables::{TableAnnotation, TableFallbackCoordinate};
 pub use osrm_engine::OsrmEngine;
 
 use std::ffi::{CStr, CString, c_void};
@@ -29,8 +30,11 @@ unsafe extern "C" {
         num_sources: usize,
         destinations: *const usize,
         num_destinations: usize,
+        annotations: TableAnnotation,
+        fallback_speed: f64,
+        fallback_coordinate_type: TableFallbackCoordinate,
+        scale_factor: f64,
     ) -> OsrmResult;
-
     fn osrm_trip(
         osrm_instance: *mut c_void,
         coordinates: *const f64,
@@ -152,11 +156,16 @@ impl Osrm {
         Ok(rust_str)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn table(
         &self,
         coordinates: &[(f64, f64)],
         sources: Option<&[usize]>,
         destinations: Option<&[usize]>,
+        annotations: TableAnnotation,
+        fallback_speed: f64,
+        fallback_coordinate_type: TableFallbackCoordinate,
+        scale_factor: f64,
     ) -> Result<String, String> {
         let flat_coords: Vec<f64> = coordinates
             .iter()
@@ -174,6 +183,10 @@ impl Osrm {
                 sources_vec.len(),
                 dests_vec.as_ptr(),
                 dests_vec.len(),
+                annotations,
+                fallback_speed,
+                fallback_coordinate_type,
+                scale_factor,
             )
         };
 

@@ -8,6 +8,7 @@ use osrm_interface::{
     point::Point,
     request_types::{GeometryType, OverviewZoom},
     route::RouteRequest,
+    tables::TableRequest,
     trip::TripRequest,
 };
 use rand::Rng;
@@ -221,7 +222,7 @@ fn test_native_route_geometries() {
 }
 
 #[test]
-fn test_remote_nearest() {
+fn test_native_nearest() {
     let engine = init_native_engine(".env");
 
     let num_points = 3;
@@ -237,4 +238,70 @@ fn test_remote_nearest() {
         num_points as usize,
         "Nearest returned the wrong number of points"
     );
+}
+
+#[test]
+fn test_native_table() {
+    let engine = init_native_engine(".env");
+
+    let sources = [
+        Point::new(48.040437, 10.316550).expect("Invalid point"),
+        Point::new(49.040437, 10.216550).expect("Invalid point"),
+    ];
+    let destinations = [
+        Point::new(48.540437, 10.816550).expect("Invalid point"),
+        Point::new(49.140437, 10.416550).expect("Invalid point"),
+        Point::new(49.140437, 10.516550).expect("Invalid point"),
+    ];
+    let table_request =
+        TableRequest::new(&sources, &destinations).expect("Failed to create table request");
+    let response = engine
+        .table(table_request)
+        .expect("Failed to determine table");
+
+    assert_eq!(response.code, "Ok", "Response code is not 'Ok'");
+    assert_eq!(
+        response.sources.len(),
+        sources.len(),
+        "Returned more sources than anticipated"
+    );
+    assert_eq!(
+        response.destinations.len(),
+        destinations.len(),
+        "Returned more destinations than anticipated"
+    );
+}
+#[test]
+fn test_table_options() {
+    let engine = init_native_engine(".env");
+
+    let sources = [
+        Point::new(48.040437, 10.316550).expect("Invalid point"),
+        Point::new(49.040437, 10.216550).expect("Invalid point"),
+    ];
+    let destinations = [
+        Point::new(48.540437, 10.816550).expect("Invalid point"),
+        Point::new(49.140437, 10.416550).expect("Invalid point"),
+        Point::new(49.140437, 10.516550).expect("Invalid point"),
+    ];
+    let table_request = TableRequest::new(&sources, &destinations)
+        .expect("Failed to create table request")
+        .with_annotations(osrm_interface::tables::TableAnnotation::All);
+    let response = engine
+        .table(table_request)
+        .expect("Failed to determine table");
+
+    assert_eq!(response.code, "Ok", "Response code is not 'Ok'");
+    assert_eq!(
+        response.sources.len(),
+        sources.len(),
+        "Returned more sources than anticipated"
+    );
+    assert_eq!(
+        response.destinations.len(),
+        destinations.len(),
+        "Returned more destinations than anticipated"
+    );
+    assert!(response.distances.is_some(), "Distances should be Some");
+    assert!(response.durations.is_some(), "Durations should be Some");
 }

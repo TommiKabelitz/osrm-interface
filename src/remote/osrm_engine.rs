@@ -5,7 +5,7 @@ use crate::nearest::NearestResponse;
 use crate::point::Point;
 use crate::request_types::Profile;
 use crate::route::{RouteRequest, RouteResponse, SimpleRouteResponse};
-use crate::tables::{TableRequest, TableResponse};
+use crate::tables::{TableAnnotation, TableRequest, TableResponse};
 use crate::trip::{TripRequest, TripResponse};
 
 pub struct OsrmEngine {
@@ -32,16 +32,42 @@ impl OsrmEngine {
             .map(|p| format!("{:.6},{:.6}", p.longitude(), p.latitude()))
             .join(";");
 
-        let source_indices = (0..len_sources).map(|i| format!("{}", i)).join(",");
+        let source_indices = (0..len_sources).map(|i| format!("{}", i)).join(";");
         let destination_indices = (len_sources..(len_sources + len_destinations))
             .map(|i| format!("{}", i))
             .join(";");
 
-        let url = format!(
+        let mut url = format!(
             "{}/table/v1/{}/{coordinates}?sources={source_indices}&destinations={destination_indices}",
             self.endpoint,
-            self.profile.url_form()
+            self.profile.url_form(),
         );
+
+        match (
+            table_request.fallback_coordinate,
+            table_request.fallback_speed,
+        ) {
+            (Some(coord), Some(speed)) => url.push_str(&format!(
+                "&fallback_speed={}&fallback_coordinate={}",
+                speed,
+                coord.url_form()
+            )),
+            (None, None) => (),
+            _ => return Err(OsrmError::InvalidTableRequest),
+        }
+        match (table_request.scale_factor, table_request.annotations) {
+            (Some(scale), TableAnnotation::All | TableAnnotation::Duration) => {
+                url.push_str(&format!(
+                    "&annotations={}&scale_factor={}",
+                    table_request.annotations.url_form(),
+                    scale
+                ))
+            }
+            (Some(_), _) => return Err(OsrmError::InvalidTableRequest),
+            (None, annotations) => {
+                url.push_str(&format!("&annotations={}", annotations.url_form()))
+            }
+        }
         let response = ureq::get(url)
             .call()
             .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))?

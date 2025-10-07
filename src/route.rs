@@ -66,8 +66,11 @@ impl<'a> RouteRequest<'a> {
 )]
 #[allow(dead_code)]
 pub struct RouteResponse {
+    /// If the request was successful "Ok" otherwise see the service dependent and general status codes
     pub code: String,
+    /// An array of `Route` objects, ordered by descending recommendation rank
     pub routes: Vec<Route>,
+    /// Array of `Waypoint` objects representing all waypoints in order
     pub waypoints: Vec<Waypoint>,
 }
 
