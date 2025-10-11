@@ -7,7 +7,7 @@ pub mod point;
 pub mod request_types;
 pub mod route;
 mod str_ops;
-pub mod tables;
+pub mod table;
 pub mod trip;
 
 pub(crate) use str_ops::get_index_of_line_col;

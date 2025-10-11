@@ -23,48 +23,78 @@ pub struct TableRequest<'a> {
     pub scale_factor: Option<f64>,
 }
 
-impl<'a> TableRequest<'a> {
-    pub fn new(sources: &'a [Point], destinations: &'a [Point]) -> Option<Self> {
-        if sources.is_empty() || destinations.is_empty() {
-            return None;
-        }
-        Some(Self {
+#[derive(Debug)]
+pub enum TableRequestError {
+    EmptySources,
+    EmptyDestinations,
+    NonPositiveValue(&'static str),
+}
+
+pub struct TableRequestBuilder<'a> {
+    sources: &'a [Point],
+    destinations: &'a [Point],
+    annotations: TableAnnotation,
+    fallback_speed: Option<f64>,
+    fallback_coordinate: Option<TableFallbackCoordinate>,
+    scale_factor: Option<f64>,
+}
+
+impl<'a> TableRequestBuilder<'a> {
+    pub fn new(sources: &'a [Point], destinations: &'a [Point]) -> Self {
+        Self {
             sources,
             destinations,
             annotations: TableAnnotation::Duration,
             fallback_speed: None,
             fallback_coordinate: None,
             scale_factor: None,
-        })
+        }
     }
 
-    pub fn with_annotations(mut self, annotations: TableAnnotation) -> Self {
-        self.annotations = annotations;
+    pub fn annotations(mut self, val: TableAnnotation) -> Self {
+        self.annotations = val;
         self
     }
 
-    pub fn with_fallback(
-        mut self,
-        fallback_coordinate: TableFallbackCoordinate,
-        fallback_speed: f64,
-    ) -> Result<Self, (Self, TableReqestError)> {
-        if fallback_speed <= 0.0 {
-            return Err((self, TableReqestError::NonPositiveValue));
-        }
-        self.fallback_coordinate = Some(fallback_coordinate);
-        self.fallback_speed = Some(fallback_speed);
-        Ok(self)
+    pub fn fallback(mut self, coord: TableFallbackCoordinate, speed: f64) -> Self {
+        self.fallback_coordinate = Some(coord);
+        self.fallback_speed = Some(speed);
+        self
     }
 
-    pub fn with_scale_factor(
-        mut self,
-        scale_factor: f64,
-    ) -> Result<Self, (Self, TableReqestError)> {
-        if scale_factor <= 0.0 {
-            return Err((self, TableReqestError::NonPositiveValue));
+    pub fn scale_factor(mut self, val: f64) -> Self {
+        self.scale_factor = Some(val);
+        self
+    }
+
+    pub fn build(self) -> Result<TableRequest<'a>, TableRequestError> {
+        if self.sources.is_empty() {
+            return Err(TableRequestError::EmptySources);
         }
-        self.scale_factor = Some(scale_factor);
-        Ok(self)
+        if self.destinations.is_empty() {
+            return Err(TableRequestError::EmptyDestinations);
+        }
+        #[allow(clippy::collapsible_if)]
+        if let Some(s) = self.fallback_speed {
+            if s <= 0.0 {
+                return Err(TableRequestError::NonPositiveValue("fallback_speed"));
+            }
+        }
+        #[allow(clippy::collapsible_if)]
+        if let Some(f) = self.scale_factor {
+            if f <= 0.0 {
+                return Err(TableRequestError::NonPositiveValue("scale_factor"));
+            }
+        }
+
+        Ok(TableRequest {
+            sources: self.sources,
+            destinations: self.destinations,
+            annotations: self.annotations,
+            fallback_speed: self.fallback_speed,
+            fallback_coordinate: self.fallback_coordinate,
+            scale_factor: self.scale_factor,
+        })
     }
 }
 

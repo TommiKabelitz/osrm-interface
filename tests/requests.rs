@@ -1,4 +1,4 @@
-use osrm_interface::{point::Point, route::RouteRequest};
+use osrm_interface::{point::Point, route::RouteRequestBuilder};
 
 #[test]
 fn test_invalid_point() {
@@ -30,16 +30,16 @@ fn test_invalid_point() {
 #[test]
 fn test_invalid_route_request() {
     let points = [];
-    let route_request = RouteRequest::new(&points);
+    let route_request = RouteRequestBuilder::new(&points).build();
     assert!(
-        route_request.is_none(),
-        "Request should return None for zero points"
+        route_request.is_err(),
+        "Request builder should return Error for zero points"
     );
 
     let points = [Point::new(48.040437, 10.316550).expect("Invalid point")];
-    let route_request = RouteRequest::new(&points);
+    let route_request = RouteRequestBuilder::new(&points).build();
     assert!(
-        route_request.is_none(),
-        "Request should return None for one point"
+        route_request.is_err(),
+        "Request should return Error for one point"
     );
 }

@@ -3,7 +3,7 @@ use crate::errors::OsrmError;
 use crate::osrm_response_types::{Route, Waypoint};
 use crate::point::Point;
 use crate::route::{RouteRequest, RouteResponse, SimpleRouteResponse};
-use crate::tables::{TableAnnotation, TableLocationEntry, TableRequest, TableResponse};
+use crate::table::{TableAnnotation, TableLocationEntry, TableRequest, TableResponse};
 use crate::trip::{TripRequest, TripResponse};
 
 pub struct OsrmEngine {}

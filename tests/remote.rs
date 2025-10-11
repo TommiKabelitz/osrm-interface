@@ -4,13 +4,13 @@ mod common;
 use common::init_remote_engine;
 
 use osrm_interface::{
-    r#match::MatchRequest,
+    r#match::MatchRequestBuilder,
     osrm_response_types::Geometry,
     point::Point,
     request_types::{GeometryType, OverviewZoom},
-    route::RouteRequest,
-    tables::TableRequest,
-    trip::TripRequest,
+    route::RouteRequestBuilder,
+    table::TableRequestBuilder,
+    trip::TripRequestBuilder,
 };
 
 #[test]
@@ -24,9 +24,10 @@ fn test_basic_remote_route() {
         Point::new(48.942296, 10.510960).expect("Invalid point"),
         Point::new(51.248931, 7.594814).expect("Invalid point"),
     ];
-    let route_request = RouteRequest::new(&points)
-        .expect("No points in request")
-        .with_geometry(osrm_interface::request_types::GeometryType::GeoJSON);
+    let route_request = RouteRequestBuilder::new(&points)
+        .geometry(osrm_interface::request_types::GeometryType::GeoJSON)
+        .build()
+        .expect("No points in request");
 
     let response = engine
         .route(&route_request)
@@ -50,9 +51,10 @@ fn test_basic_remote_trip() {
         Point::new(48.942296, 10.510960).expect("Invalid point"),
         Point::new(51.248931, 7.594814).expect("Invalid point"),
     ];
-    let trip_request = TripRequest::new(&points)
-        .expect("No points in trip request")
-        .with_geometry(osrm_interface::request_types::GeometryType::GeoJSON);
+    let trip_request = TripRequestBuilder::new(&points)
+        .geometry(osrm_interface::request_types::GeometryType::GeoJSON)
+        .build()
+        .expect("Failed to build trip request");
 
     let trip_response = engine.trip(&trip_request).expect("Failed navigate trip");
 
@@ -76,10 +78,11 @@ fn test_remote_route_geometries() {
         Point::new(48.040437, 10.316550).expect("Invalid point"),
         Point::new(49.006101, 9.052887).expect("Invalid point"),
     ];
-    let route_request = RouteRequest::new(&points)
-        .expect("No points in request")
-        .with_geometry(GeometryType::GeoJSON)
-        .with_overview(OverviewZoom::Full);
+    let route_request = RouteRequestBuilder::new(&points)
+        .geometry(GeometryType::GeoJSON)
+        .overview(OverviewZoom::Full)
+        .build()
+        .expect("No points in request");
 
     let response = engine
         .route(&route_request)
@@ -94,10 +97,11 @@ fn test_remote_route_geometries() {
         "Geometry should be GeoJson"
     );
 
-    let route_request = RouteRequest::new(&points)
-        .expect("No points in request")
-        .with_geometry(GeometryType::Polyline6)
-        .with_overview(OverviewZoom::Full);
+    let route_request = RouteRequestBuilder::new(&points)
+        .geometry(GeometryType::Polyline6)
+        .overview(OverviewZoom::Full)
+        .build()
+        .expect("No points in request");
 
     let response = engine
         .route(&route_request)
@@ -144,8 +148,9 @@ fn test_remote_table() {
         Point::new(49.140437, 10.416550).expect("Invalid point"),
         Point::new(49.140437, 10.516550).expect("Invalid point"),
     ];
-    let table_request =
-        TableRequest::new(&sources, &destinations).expect("Failed to create table request");
+    let table_request = TableRequestBuilder::new(&sources, &destinations)
+        .build()
+        .expect("Failed to create table request");
     let response = engine
         .table(table_request)
         .expect("Failed to determine table");
@@ -184,9 +189,10 @@ fn test_table_options() {
         Point::new(49.140437, 10.416550).expect("Invalid point"),
         Point::new(49.140437, 10.516550).expect("Invalid point"),
     ];
-    let table_request = TableRequest::new(&sources, &destinations)
-        .expect("Failed to create table request")
-        .with_annotations(osrm_interface::tables::TableAnnotation::All);
+    let table_request = TableRequestBuilder::new(&sources, &destinations)
+        .annotations(osrm_interface::table::TableAnnotation::All)
+        .build()
+        .expect("Failed to create table request");
     let response = engine
         .table(table_request)
         .expect("Failed to determine table");
@@ -221,11 +227,12 @@ fn test_match_basic() {
         Point::new(51.10307204569769, 11.561966320703071).expect("Invalid point"),
     ];
 
-    let match_request = MatchRequest::new(&points)
-        .expect("Failed to create match request")
-        .with_geometry(GeometryType::Polyline)
-        .with_overview(OverviewZoom::Full)
-        .with_gaps(osrm_interface::r#match::MatchGapsBehaviour::Ignore);
+    let match_request = MatchRequestBuilder::new(&points)
+        .geometry(GeometryType::Polyline)
+        .overview(OverviewZoom::Full)
+        .gaps(osrm_interface::r#match::MatchGapsBehaviour::Ignore)
+        .build()
+        .expect("Failed to create match request");
     let response = engine
         .r#match(&match_request)
         .expect("Failed to match route");

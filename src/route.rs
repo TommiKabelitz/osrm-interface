@@ -13,12 +13,25 @@ pub struct RouteRequest<'a> {
     pub annotations: bool,
     pub continue_straight: bool,
 }
-impl<'a> RouteRequest<'a> {
-    pub fn new(points: &'a [Point]) -> Option<Self> {
-        if points.len() < 2 {
-            return None;
-        }
-        Some(Self {
+
+#[derive(Debug)]
+pub enum RouteRequestError {
+    TooFewPoints,
+}
+
+pub struct RouteRequestBuilder<'a> {
+    points: &'a [Point],
+    alternatives: bool,
+    steps: bool,
+    geometry: GeometryType,
+    overview: OverviewZoom,
+    annotations: bool,
+    continue_straight: bool,
+}
+
+impl<'a> RouteRequestBuilder<'a> {
+    pub fn new(points: &'a [Point]) -> Self {
+        Self {
             points,
             geometry: GeometryType::Polyline,
             overview: OverviewZoom::Simplified,
@@ -26,36 +39,53 @@ impl<'a> RouteRequest<'a> {
             steps: false,
             annotations: false,
             continue_straight: true,
-        })
+        }
     }
-    pub fn with_alternatives(mut self) -> Self {
-        self.alternatives = true;
+
+    pub fn alternatives(mut self, val: bool) -> Self {
+        self.alternatives = val;
         self
     }
 
-    pub fn with_steps(mut self) -> Self {
-        self.steps = true;
+    pub fn steps(mut self, val: bool) -> Self {
+        self.steps = val;
         self
     }
 
-    pub fn with_annotations(mut self) -> Self {
-        self.annotations = true;
+    pub fn annotations(mut self, val: bool) -> Self {
+        self.annotations = val;
         self
     }
 
-    pub fn with_geometry(mut self, val: GeometryType) -> Self {
+    pub fn geometry(mut self, val: GeometryType) -> Self {
         self.geometry = val;
         self
     }
 
-    pub fn with_overview(mut self, val: OverviewZoom) -> Self {
+    pub fn overview(mut self, val: OverviewZoom) -> Self {
         self.overview = val;
         self
     }
 
-    pub fn with_continue_straight(mut self) -> Self {
-        self.continue_straight = true;
+    pub fn continue_straight(mut self, val: bool) -> Self {
+        self.continue_straight = val;
         self
+    }
+
+    pub fn build(self) -> Result<RouteRequest<'a>, RouteRequestError> {
+        if self.points.len() < 2 {
+            return Err(RouteRequestError::TooFewPoints);
+        }
+
+        Ok(RouteRequest {
+            points: self.points,
+            alternatives: self.alternatives,
+            steps: self.steps,
+            geometry: self.geometry,
+            overview: self.overview,
+            annotations: self.annotations,
+            continue_straight: self.continue_straight,
+        })
     }
 }
 

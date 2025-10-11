@@ -4,11 +4,11 @@ mod common;
 use common::{init_native_engine, init_remote_engine};
 
 use osrm_interface::{
-    r#match::MatchRequest,
+    r#match::MatchRequestBuilder,
     osrm_response_types::Geometry,
     point::Point,
     request_types::{GeometryType, OverviewZoom},
-    route::RouteRequest,
+    route::RouteRequestBuilder,
 };
 use rand::Rng;
 
@@ -22,7 +22,9 @@ fn test_native_and_remote_route() {
         .map(|_| Point::new(rng.random_range(49.0..53.0), rng.random_range(8.3..12.0)).unwrap())
         .collect::<Vec<_>>();
 
-    let route_request = RouteRequest::new(&points).expect("No points in request");
+    let route_request = RouteRequestBuilder::new(&points)
+        .build()
+        .expect("No points in request");
 
     let native_response = native_engine
         .route(&route_request)
@@ -129,11 +131,12 @@ fn test_compare_match() {
         Point::new(51.10307204569769, 11.561966320703071).expect("Invalid point"),
     ];
 
-    let match_request = MatchRequest::new(&points)
-        .expect("Failed to create match request")
-        .with_geometry(GeometryType::Polyline)
-        .with_overview(OverviewZoom::Full)
-        .with_gaps(osrm_interface::r#match::MatchGapsBehaviour::Ignore);
+    let match_request = MatchRequestBuilder::new(&points)
+        .geometry(GeometryType::Polyline)
+        .overview(OverviewZoom::Full)
+        .gaps(osrm_interface::r#match::MatchGapsBehaviour::Ignore)
+        .build()
+        .expect("Failed to create match request");
     let remote_response = remote_engine
         .r#match(&match_request)
         .expect("Failed to match route");

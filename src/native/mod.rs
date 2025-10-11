@@ -2,7 +2,7 @@ mod osrm_engine;
 use crate::r#match::{MatchGapsBehaviour, MatchRequest};
 use crate::request_types::{GeometryType, OverviewZoom};
 use crate::route::RouteRequest;
-use crate::tables::{TableAnnotation, TableFallbackCoordinate};
+use crate::table::{TableAnnotation, TableFallbackCoordinate};
 pub use osrm_engine::OsrmEngine;
 
 use std::ffi::{CStr, CString, c_void};

@@ -4,13 +4,13 @@ mod common;
 use common::init_native_engine;
 
 use osrm_interface::{
-    r#match::MatchRequest,
+    r#match::MatchRequestBuilder,
     osrm_response_types::Geometry,
     point::Point,
     request_types::{GeometryType, OverviewZoom},
-    route::RouteRequest,
-    tables::TableRequest,
-    trip::TripRequest,
+    route::RouteRequestBuilder,
+    table::TableRequestBuilder,
+    trip::TripRequestBuilder,
 };
 use rand::Rng;
 
@@ -24,7 +24,9 @@ fn test_basic_native_route() {
         Point::new(48.942296, 10.510960).expect("Invalid point"),
         Point::new(51.248931, 7.594814).expect("Invalid point"),
     ];
-    let route_request = RouteRequest::new(&points).expect("No points in request");
+    let route_request = RouteRequestBuilder::new(&points)
+        .build()
+        .expect("No points in request");
 
     let response = engine
         .route(&route_request)
@@ -46,7 +48,9 @@ fn test_two_point_native_route() {
         Point::new(48.040437, 10.316550).expect("Invalid point"),
         Point::new(49.006101, 9.052887).expect("Invalid point"),
     ];
-    let route_request = RouteRequest::new(&points).expect("No points in request");
+    let route_request = RouteRequestBuilder::new(&points)
+        .build()
+        .expect("No points in request");
 
     let response = engine
         .route(&route_request)
@@ -70,7 +74,9 @@ fn test_large_native_route() {
         .map(|_| Point::new(rng.random_range(49.0..53.0), rng.random_range(8.3..12.0)).unwrap())
         .collect::<Vec<_>>();
 
-    let route_request = RouteRequest::new(&points).expect("No points in request");
+    let route_request = RouteRequestBuilder::new(&points)
+        .build()
+        .expect("No points in request");
 
     let response = engine
         .route(&route_request)
@@ -93,7 +99,9 @@ fn test_basic_native_trip() {
         Point::new(48.942296, 10.510960).expect("Invalid point"),
         Point::new(51.248931, 7.594814).expect("Invalid point"),
     ];
-    let trip_request = TripRequest::new(&points).expect("No points in trip request");
+    let trip_request = TripRequestBuilder::new(&points)
+        .build()
+        .expect("Failed to build trip request");
 
     let trip_response = engine.trip(trip_request).expect("Failed navigate trip");
 
@@ -117,10 +125,10 @@ fn test_native_route_steps() {
         Point::new(48.040437, 10.316550).expect("Invalid point"),
         Point::new(49.006101, 9.052887).expect("Invalid point"),
     ];
-    let route_request = RouteRequest::new(&points)
-        .expect("No points in request")
-        .with_steps();
-
+    let route_request = RouteRequestBuilder::new(&points)
+        .steps(true)
+        .build()
+        .expect("No points in request");
     let response = engine
         .route(&route_request)
         .expect("Failed to route request");
@@ -148,9 +156,10 @@ fn test_native_route_annotations() {
         Point::new(48.040437, 10.316550).expect("Invalid point"),
         Point::new(49.006101, 9.052887).expect("Invalid point"),
     ];
-    let route_request = RouteRequest::new(&points)
-        .expect("No points in request")
-        .with_annotations();
+    let route_request = RouteRequestBuilder::new(&points)
+        .annotations(true)
+        .build()
+        .expect("No points in request");
 
     let response = engine
         .route(&route_request)
@@ -185,10 +194,11 @@ fn test_native_route_geometries() {
         Point::new(48.040437, 10.316550).expect("Invalid point"),
         Point::new(49.006101, 9.052887).expect("Invalid point"),
     ];
-    let route_request = RouteRequest::new(&points)
-        .expect("No points in request")
-        .with_geometry(GeometryType::GeoJSON)
-        .with_overview(OverviewZoom::Full);
+    let route_request = RouteRequestBuilder::new(&points)
+        .geometry(GeometryType::GeoJSON)
+        .overview(OverviewZoom::Full)
+        .build()
+        .expect("No points in request");
 
     let response = engine
         .route(&route_request)
@@ -203,10 +213,11 @@ fn test_native_route_geometries() {
         "Geometry should be GeoJson"
     );
 
-    let route_request = RouteRequest::new(&points)
-        .expect("No points in request")
-        .with_geometry(GeometryType::Polyline6)
-        .with_overview(OverviewZoom::Full);
+    let route_request = RouteRequestBuilder::new(&points)
+        .geometry(GeometryType::Polyline6)
+        .overview(OverviewZoom::Full)
+        .build()
+        .expect("No points in request");
 
     let response = engine
         .route(&route_request)
@@ -254,8 +265,9 @@ fn test_native_table() {
         Point::new(49.140437, 10.416550).expect("Invalid point"),
         Point::new(49.140437, 10.516550).expect("Invalid point"),
     ];
-    let table_request =
-        TableRequest::new(&sources, &destinations).expect("Failed to create table request");
+    let table_request = TableRequestBuilder::new(&sources, &destinations)
+        .build()
+        .expect("Failed to create table request");
     let response = engine
         .table(table_request)
         .expect("Failed to determine table");
@@ -285,9 +297,10 @@ fn test_table_options() {
         Point::new(49.140437, 10.416550).expect("Invalid point"),
         Point::new(49.140437, 10.516550).expect("Invalid point"),
     ];
-    let table_request = TableRequest::new(&sources, &destinations)
-        .expect("Failed to create table request")
-        .with_annotations(osrm_interface::tables::TableAnnotation::All);
+    let table_request = TableRequestBuilder::new(&sources, &destinations)
+        .annotations(osrm_interface::table::TableAnnotation::All)
+        .build()
+        .expect("Failed to create table request");
     let response = engine
         .table(table_request)
         .expect("Failed to determine table");
@@ -322,24 +335,15 @@ fn test_match_basic() {
         Point::new(51.10307204569769, 11.561966320703071).expect("Invalid point"),
     ];
 
-    let match_request = MatchRequest::new(&points)
-        .expect("Failed to create match request")
-        .with_geometry(GeometryType::Polyline)
-        .with_overview(OverviewZoom::Full)
-        .with_gaps(osrm_interface::r#match::MatchGapsBehaviour::Ignore);
+    let match_request = MatchRequestBuilder::new(&points)
+        .geometry(GeometryType::Polyline)
+        .overview(OverviewZoom::Full)
+        .gaps(osrm_interface::r#match::MatchGapsBehaviour::Ignore)
+        .build()
+        .expect("Failed to create match request");
     let response = engine
         .r#match(&match_request)
         .expect("Failed to match route");
 
     assert_eq!(response.code, "Ok", "Response code is not 'Ok'");
-    println!(
-        "{:?}",
-        response
-            .matchings
-            .first()
-            .unwrap()
-            .geometry
-            .as_ref()
-            .unwrap()
-    );
 }

@@ -4,8 +4,8 @@ use crate::r#match::{MatchGapsBehaviour, MatchRequest, MatchResponse};
 use crate::native::Osrm;
 use crate::nearest::NearestResponse;
 use crate::point::Point;
-use crate::route::{RouteRequest, RouteResponse, SimpleRouteResponse};
-use crate::tables::{TableAnnotation, TableFallbackCoordinate, TableRequest, TableResponse};
+use crate::route::{RouteRequest, RouteRequestBuilder, RouteResponse, SimpleRouteResponse};
+use crate::table::{TableAnnotation, TableFallbackCoordinate, TableRequest, TableResponse};
 use crate::trip::{TripRequest, TripResponse};
 
 pub struct OsrmEngine {
@@ -105,7 +105,9 @@ impl OsrmEngine {
 
     pub fn simple_route(&self, from: Point, to: Point) -> Result<SimpleRouteResponse, OsrmError> {
         let points = [from, to];
-        let request = RouteRequest::new(&points).expect("Route request for simple route is empty");
+        let request = RouteRequestBuilder::new(&points)
+            .build()
+            .expect("Route request for simple route is empty");
 
         let result = self
             .instance

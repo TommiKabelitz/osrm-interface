@@ -13,38 +13,56 @@ pub struct TripRequest<'a> {
     pub overview: OverviewZoom,
 }
 
-impl<'a> TripRequest<'a> {
-    pub fn new(points: &'a [Point]) -> Option<Self> {
-        if points.is_empty() {
-            return None;
-        }
-        Some(Self {
+pub struct TripRequestBuilder<'a> {
+    points: &'a [Point],
+    steps: bool,
+    annotations: bool,
+    geometry: GeometryType,
+    overview: OverviewZoom,
+}
+
+impl<'a> TripRequestBuilder<'a> {
+    pub fn new(points: &'a [Point]) -> Self {
+        Self {
             points,
             steps: false,
             annotations: false,
             geometry: GeometryType::Polyline,
-            overview: OverviewZoom::Simplified,
-        })
+            overview: OverviewZoom::False,
+        }
     }
 
-    pub fn with_steps(mut self, val: bool) -> Self {
+    pub fn steps(mut self, val: bool) -> Self {
         self.steps = val;
         self
     }
 
-    pub fn with_annotations(mut self, val: bool) -> Self {
+    pub fn annotations(mut self, val: bool) -> Self {
         self.annotations = val;
         self
     }
 
-    pub fn with_geometry(mut self, val: GeometryType) -> Self {
+    pub fn geometry(mut self, val: GeometryType) -> Self {
         self.geometry = val;
         self
     }
 
-    pub fn with_overview(mut self, val: OverviewZoom) -> Self {
+    pub fn overview(mut self, val: OverviewZoom) -> Self {
         self.overview = val;
         self
+    }
+
+    pub fn build(self) -> Option<TripRequest<'a>> {
+        if self.points.is_empty() {
+            return None;
+        }
+        Some(TripRequest {
+            points: self.points,
+            steps: self.steps,
+            annotations: self.annotations,
+            geometry: self.geometry,
+            overview: self.overview,
+        })
     }
 }
 

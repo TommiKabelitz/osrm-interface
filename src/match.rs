@@ -18,12 +18,23 @@ pub struct MatchRequest<'a> {
     pub tidy: bool,
     pub waypoints: Option<&'a [usize]>,
 }
-impl<'a> MatchRequest<'a> {
-    pub fn new(points: &'a [Point]) -> Option<Self> {
-        if points.len() < 2 {
-            return None;
-        }
-        Some(Self {
+
+pub struct MatchRequestBuilder<'a> {
+    points: &'a [Point],
+    steps: bool,
+    geometry: GeometryType,
+    overview: OverviewZoom,
+    annotations: bool,
+    timestamps: Option<&'a [u64]>,
+    radiuses: Option<&'a [f64]>,
+    gaps: MatchGapsBehaviour,
+    tidy: bool,
+    waypoints: Option<&'a [usize]>,
+}
+
+impl<'a> MatchRequestBuilder<'a> {
+    pub fn new(points: &'a [Point]) -> Self {
+        Self {
             points,
             geometry: GeometryType::Polyline,
             overview: OverviewZoom::Simplified,
@@ -34,75 +45,102 @@ impl<'a> MatchRequest<'a> {
             gaps: MatchGapsBehaviour::Split,
             tidy: false,
             waypoints: None,
-        })
+        }
     }
 
-    pub fn with_steps(mut self) -> Self {
-        self.steps = true;
+    pub fn steps(mut self, val: bool) -> Self {
+        self.steps = val;
         self
     }
 
-    pub fn with_annotations(mut self) -> Self {
-        self.annotations = true;
+    pub fn annotations(mut self, val: bool) -> Self {
+        self.annotations = val;
         self
     }
 
-    pub fn with_geometry(mut self, val: GeometryType) -> Self {
+    pub fn geometry(mut self, val: GeometryType) -> Self {
         self.geometry = val;
         self
     }
 
-    pub fn with_overview(mut self, val: OverviewZoom) -> Self {
+    pub fn overview(mut self, val: OverviewZoom) -> Self {
         self.overview = val;
         self
     }
 
-    pub fn with_timestamps(
-        mut self,
-        timestamps: &'a [u64],
-    ) -> Result<Self, (Self, MatchRequestError)> {
-        if timestamps.len() != self.points.len() {
-            return Err((self, MatchRequestError::DimensionMismatch));
-        }
-        if !timestamps.is_sorted() {
-            return Err((self, MatchRequestError::TimestampsNotSorted));
-        }
-        self.timestamps = Some(timestamps);
-        Ok(self)
-    }
-
-    pub fn with_radiuses(mut self, radiuses: &'a [f64]) -> Result<Self, (Self, MatchRequestError)> {
-        if radiuses.len() != self.points.len() {
-            return Err((self, MatchRequestError::DimensionMismatch));
-        }
-        self.radiuses = Some(radiuses);
-        Ok(self)
-    }
-
-    pub fn with_gaps(mut self, gaps_behaviour: MatchGapsBehaviour) -> Self {
-        self.gaps = gaps_behaviour;
+    pub fn timestamps(mut self, val: &'a [u64]) -> Self {
+        self.timestamps = Some(val);
         self
     }
 
-    pub fn with_tidy(mut self) -> Self {
-        self.tidy = false;
+    pub fn radiuses(mut self, val: &'a [f64]) -> Self {
+        self.radiuses = Some(val);
         self
     }
 
-    pub fn with_waypoints(
-        mut self,
-        waypoints: &'a [usize],
-    ) -> Result<Self, (Self, MatchRequestError)> {
-        if waypoints.is_empty() {
-            return Err((self, MatchRequestError::EmptyWaypoints));
+    pub fn gaps(mut self, val: MatchGapsBehaviour) -> Self {
+        self.gaps = val;
+        self
+    }
+
+    pub fn tidy(mut self, val: bool) -> Self {
+        self.tidy = val;
+        self
+    }
+
+    pub fn waypoints(mut self, val: &'a [usize]) -> Self {
+        self.waypoints = Some(val);
+        self
+    }
+
+    pub fn build(self) -> Result<MatchRequest<'a>, MatchRequestError> {
+        if self.points.len() < 2 {
+            return Err(MatchRequestError::TooFewPoints);
         }
-        if *waypoints.iter().max().unwrap() > self.points.len() - 1 {
-            return Err((self, MatchRequestError::IndexMismatch));
+
+        if let Some(timestamps) = self.timestamps {
+            if timestamps.len() != self.points.len() {
+                return Err(MatchRequestError::DimensionMismatch);
+            }
+            if !timestamps.is_sorted() {
+                return Err(MatchRequestError::TimestampsNotSorted);
+            }
         }
-        self.waypoints = Some(waypoints);
-        Ok(self)
+
+        #[allow(clippy::collapsible_if)]
+        if let Some(radiuses) = self.radiuses {
+            if radiuses.len() != self.points.len() {
+                return Err(MatchRequestError::DimensionMismatch);
+            }
+        }
+
+        #[allow(clippy::collapsible_if)]
+        if let Some(waypoints) = self.waypoints {
+            if waypoints.is_empty() {
+                return Err(MatchRequestError::EmptyWaypoints);
+            }
+            if let Some(max_idx) = waypoints.iter().max() {
+                if *max_idx >= self.points.len() {
+                    return Err(MatchRequestError::IndexOutOfBounds);
+                }
+            }
+        }
+
+        Ok(MatchRequest {
+            points: self.points,
+            steps: self.steps,
+            geometry: self.geometry,
+            overview: self.overview,
+            annotations: self.annotations,
+            timestamps: self.timestamps,
+            radiuses: self.radiuses,
+            gaps: self.gaps,
+            tidy: self.tidy,
+            waypoints: self.waypoints,
+        })
     }
 }
+
 #[derive(Clone, Copy)]
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[repr(C)]
@@ -131,9 +169,11 @@ pub struct MatchResponse {
     pub matchings: Vec<MatchRoute>,
 }
 
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub enum MatchRequestError {
+    TooFewPoints,
     DimensionMismatch,
-    IndexMismatch,
-    EmptyWaypoints,
     TimestampsNotSorted,
+    EmptyWaypoints,
+    IndexOutOfBounds,
 }
