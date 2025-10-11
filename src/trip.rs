@@ -6,15 +6,15 @@ use crate::{
 
 #[cfg_attr(feature = "debug", derive(Debug))]
 pub struct TripRequest<'a> {
-    pub points: &'a [Point],
-    pub steps: bool,
-    pub annotations: bool,
-    pub geometry: GeometryType,
-    pub overview: OverviewZoom,
+    pub(crate) points: &'a [Point],
+    pub(crate) steps: bool,
+    pub(crate) annotations: bool,
+    pub(crate) geometry: GeometryType,
+    pub(crate) overview: OverviewZoom,
 }
 
 pub struct TripRequestBuilder<'a> {
-    points: &'a [Point],
+    pub points: &'a [Point],
     steps: bool,
     annotations: bool,
     geometry: GeometryType,
@@ -52,11 +52,11 @@ impl<'a> TripRequestBuilder<'a> {
         self
     }
 
-    pub fn build(self) -> Option<TripRequest<'a>> {
-        if self.points.is_empty() {
-            return None;
+    pub fn build(self) -> Result<TripRequest<'a>, TripRequestError> {
+        if self.points.len() < 2 {
+            return Err(TripRequestError::InsufficientPoints);
         }
-        Some(TripRequest {
+        Ok(TripRequest {
             points: self.points,
             steps: self.steps,
             annotations: self.annotations,
@@ -64,6 +64,11 @@ impl<'a> TripRequestBuilder<'a> {
             overview: self.overview,
         })
     }
+}
+
+#[cfg_attr(feature = "debug", derive(Debug))]
+pub enum TripRequestError {
+    InsufficientPoints,
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]

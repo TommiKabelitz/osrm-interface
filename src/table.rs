@@ -15,24 +15,17 @@ pub struct TableLocationEntry {
 #[derive(Clone)]
 #[cfg_attr(feature = "debug", derive(Debug))]
 pub struct TableRequest<'a> {
-    pub sources: &'a [Point],
-    pub destinations: &'a [Point],
-    pub annotations: TableAnnotation,
-    pub fallback_speed: Option<f64>,
-    pub fallback_coordinate: Option<TableFallbackCoordinate>,
-    pub scale_factor: Option<f64>,
-}
-
-#[derive(Debug)]
-pub enum TableRequestError {
-    EmptySources,
-    EmptyDestinations,
-    NonPositiveValue(&'static str),
+    pub(crate) sources: &'a [Point],
+    pub(crate) destinations: &'a [Point],
+    pub(crate) annotations: TableAnnotation,
+    pub(crate) fallback_speed: Option<f64>,
+    pub(crate) fallback_coordinate: Option<TableFallbackCoordinate>,
+    pub(crate) scale_factor: Option<f64>,
 }
 
 pub struct TableRequestBuilder<'a> {
-    sources: &'a [Point],
-    destinations: &'a [Point],
+    pub sources: &'a [Point],
+    pub destinations: &'a [Point],
     annotations: TableAnnotation,
     fallback_speed: Option<f64>,
     fallback_coordinate: Option<TableFallbackCoordinate>,
@@ -77,13 +70,13 @@ impl<'a> TableRequestBuilder<'a> {
         #[allow(clippy::collapsible_if)]
         if let Some(s) = self.fallback_speed {
             if s <= 0.0 {
-                return Err(TableRequestError::NonPositiveValue("fallback_speed"));
+                return Err(TableRequestError::NonPositiveFallbackSpeed);
             }
         }
         #[allow(clippy::collapsible_if)]
         if let Some(f) = self.scale_factor {
             if f <= 0.0 {
-                return Err(TableRequestError::NonPositiveValue("scale_factor"));
+                return Err(TableRequestError::NonPositiveScaleFactor);
             }
         }
 
@@ -96,6 +89,14 @@ impl<'a> TableRequestBuilder<'a> {
             scale_factor: self.scale_factor,
         })
     }
+}
+
+#[cfg_attr(feature = "debug", derive(Debug))]
+pub enum TableRequestError {
+    EmptySources,
+    EmptyDestinations,
+    NonPositiveFallbackSpeed,
+    NonPositiveScaleFactor,
 }
 
 #[derive(Clone, Copy)]
@@ -132,10 +133,6 @@ impl TableFallbackCoordinate {
             Self::Snapped => "snapped",
         }
     }
-}
-
-pub enum TableReqestError {
-    NonPositiveValue,
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]

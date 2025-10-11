@@ -7,20 +7,20 @@ use crate::{
 #[derive(Clone)]
 #[cfg_attr(feature = "debug", derive(Debug))]
 pub struct MatchRequest<'a> {
-    pub points: &'a [Point],
-    pub steps: bool,
-    pub geometry: GeometryType,
-    pub overview: OverviewZoom,
-    pub annotations: bool,
-    pub timestamps: Option<&'a [u64]>,
-    pub radiuses: Option<&'a [f64]>,
-    pub gaps: MatchGapsBehaviour,
-    pub tidy: bool,
-    pub waypoints: Option<&'a [usize]>,
+    pub(crate) points: &'a [Point],
+    pub(crate) steps: bool,
+    pub(crate) geometry: GeometryType,
+    pub(crate) overview: OverviewZoom,
+    pub(crate) annotations: bool,
+    pub(crate) timestamps: Option<&'a [u64]>,
+    pub(crate) radiuses: Option<&'a [f64]>,
+    pub(crate) gaps: MatchGapsBehaviour,
+    pub(crate) tidy: bool,
+    pub(crate) waypoints: Option<&'a [usize]>,
 }
 
 pub struct MatchRequestBuilder<'a> {
-    points: &'a [Point],
+    pub points: &'a [Point],
     steps: bool,
     geometry: GeometryType,
     overview: OverviewZoom,
@@ -100,7 +100,7 @@ impl<'a> MatchRequestBuilder<'a> {
 
         if let Some(timestamps) = self.timestamps {
             if timestamps.len() != self.points.len() {
-                return Err(MatchRequestError::DimensionMismatch);
+                return Err(MatchRequestError::TimestampDimensionMismatch);
             }
             if !timestamps.is_sorted() {
                 return Err(MatchRequestError::TimestampsNotSorted);
@@ -110,7 +110,7 @@ impl<'a> MatchRequestBuilder<'a> {
         #[allow(clippy::collapsible_if)]
         if let Some(radiuses) = self.radiuses {
             if radiuses.len() != self.points.len() {
-                return Err(MatchRequestError::DimensionMismatch);
+                return Err(MatchRequestError::RadiiDimensionMismatch);
             }
         }
 
@@ -121,7 +121,7 @@ impl<'a> MatchRequestBuilder<'a> {
             }
             if let Some(max_idx) = waypoints.iter().max() {
                 if *max_idx >= self.points.len() {
-                    return Err(MatchRequestError::IndexOutOfBounds);
+                    return Err(MatchRequestError::WaypointIndexOutOfBounds);
                 }
             }
         }
@@ -139,6 +139,16 @@ impl<'a> MatchRequestBuilder<'a> {
             waypoints: self.waypoints,
         })
     }
+}
+
+#[cfg_attr(feature = "debug", derive(Debug))]
+pub enum MatchRequestError {
+    TooFewPoints,
+    RadiiDimensionMismatch,
+    TimestampDimensionMismatch,
+    TimestampsNotSorted,
+    EmptyWaypoints,
+    WaypointIndexOutOfBounds,
 }
 
 #[derive(Clone, Copy)]
@@ -167,13 +177,4 @@ pub struct MatchResponse {
     pub code: String,
     pub tracepoints: Vec<Option<MatchWaypoint>>,
     pub matchings: Vec<MatchRoute>,
-}
-
-#[cfg_attr(feature = "debug", derive(Debug))]
-pub enum MatchRequestError {
-    TooFewPoints,
-    DimensionMismatch,
-    TimestampsNotSorted,
-    EmptyWaypoints,
-    IndexOutOfBounds,
 }

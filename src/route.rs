@@ -5,22 +5,17 @@ use crate::{point::Point, request_types::GeometryType};
 #[derive(Clone)]
 #[cfg_attr(feature = "debug", derive(Debug))]
 pub struct RouteRequest<'a> {
-    pub points: &'a [Point],
-    pub alternatives: bool,
-    pub steps: bool,
-    pub geometry: GeometryType,
-    pub overview: OverviewZoom,
-    pub annotations: bool,
-    pub continue_straight: bool,
-}
-
-#[derive(Debug)]
-pub enum RouteRequestError {
-    TooFewPoints,
+    pub(crate) points: &'a [Point],
+    pub(crate) alternatives: bool,
+    pub(crate) steps: bool,
+    pub(crate) geometry: GeometryType,
+    pub(crate) overview: OverviewZoom,
+    pub(crate) annotations: bool,
+    pub(crate) continue_straight: bool,
 }
 
 pub struct RouteRequestBuilder<'a> {
-    points: &'a [Point],
+    pub points: &'a [Point],
     alternatives: bool,
     steps: bool,
     geometry: GeometryType,
@@ -74,7 +69,7 @@ impl<'a> RouteRequestBuilder<'a> {
 
     pub fn build(self) -> Result<RouteRequest<'a>, RouteRequestError> {
         if self.points.len() < 2 {
-            return Err(RouteRequestError::TooFewPoints);
+            return Err(RouteRequestError::InsufficientPoints);
         }
 
         Ok(RouteRequest {
@@ -90,6 +85,10 @@ impl<'a> RouteRequestBuilder<'a> {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+pub enum RouteRequestError {
+    InsufficientPoints,
+}
+
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
     derive(serde::Deserialize)
