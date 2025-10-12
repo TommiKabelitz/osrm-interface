@@ -1,3 +1,5 @@
+use thiserror::Error;
+
 use crate::{
     osrm_response_types::{Route, Waypoint},
     point::Point,
@@ -66,8 +68,9 @@ impl<'a> TripRequestBuilder<'a> {
     }
 }
 
-#[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Error, Debug)]
 pub enum TripRequestError {
+    #[error("Trip requires at least 2 points")]
     InsufficientPoints,
 }
 

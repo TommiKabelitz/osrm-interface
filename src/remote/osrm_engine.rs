@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
 use crate::errors::{OsrmError, RemoteOsrmError};
-use crate::r#match::{MatchGapsBehaviour, MatchRequest, MatchResponse};
+use crate::r#match::{MatchRequest, MatchResponse};
 use crate::nearest::NearestResponse;
 use crate::point::Point;
 use crate::request_types::Profile;
@@ -192,14 +192,6 @@ impl OsrmEngine {
             return Err(OsrmError::InvalidMatchRequest);
         }
 
-        // Collapsing the if requires an if let chain which requires
-        // rustc v1.88
-        #[allow(clippy::collapsible_if)]
-        if let MatchGapsBehaviour::Split = match_request.gaps {
-            if match_request.timestamps.is_none() {
-                return Err(OsrmError::InvalidMatchRequest);
-            }
-        }
         let coordinates = match_request
             .points
             .iter()
@@ -207,7 +199,7 @@ impl OsrmEngine {
             .join(";");
 
         let mut url = format!(
-            "{}/match/v1/{}/{coordinates}?steps={}&geometries={}&overview={}&annotations={}&gaps={}&tidy={}",
+            "{}/match/v1/{}/{coordinates}?steps={}&geometries={}&overview={}&annotations={}&gaps={}&tidy={}&generate_hints={}",
             self.endpoint,
             self.profile.url_form(),
             match_request.steps,
@@ -215,20 +207,56 @@ impl OsrmEngine {
             match_request.overview.url_form(),
             match_request.annotations,
             match_request.gaps.url_form(),
-            match_request.tidy
+            match_request.tidy,
+            match_request.generate_hints,
         );
 
         if let Some(timestamps) = match_request.timestamps {
             let timestamps = timestamps.iter().map(|t| format!("{t}")).join(";");
             url.push_str(&format!("&timestamps={}", timestamps));
         }
-        if let Some(radiuses) = match_request.radiuses {
-            let radiuses = radiuses.iter().map(|r| format!("{r:.12}")).join(";");
-            url.push_str(&format!("&radiuses={}", radiuses));
-        }
         if let Some(waypoints) = match_request.waypoints {
             let waypoints = waypoints.iter().map(|w| format!("{w}")).join(";");
             url.push_str(&format!("&waypoints={}", waypoints));
+        }
+        if let Some(bearings) = match_request.bearings {
+            let bearings = bearings
+                .iter()
+                .map(|bearing| {
+                    if let Some(b) = bearing {
+                        b.url_form()
+                    } else {
+                        String::new()
+                    }
+                })
+                .join(";");
+            url.push_str(&format!("&bearings={}", bearings));
+        }
+        if let Some(radiuses) = match_request.radiuses {
+            let radiuses = radiuses
+                .iter()
+                .map(|r| {
+                    if let Some(r) = r {
+                        format!("{r:.12}")
+                    } else {
+                        String::new()
+                    }
+                })
+                .join(";");
+            url.push_str(&format!("&radiuses={}", radiuses));
+        }
+
+        if let Some(hints) = match_request.hints {
+            let hints = hints.iter().map(|hint| hint.unwrap_or("")).join(";");
+            url.push_str(&format!("&radiuses={}", hints));
+        }
+
+        if let Some(approaches) = match_request.approaches {
+            let approaches = approaches
+                .iter()
+                .map(|approach| approach.url_form())
+                .join(";");
+            url.push_str(&format!("&radiuses={}", approaches));
         }
 
         let response = ureq::get(url)

@@ -26,6 +26,13 @@ enum MatchFlags : uint8_t
     MATCH_TIDY = 1 << 0,
     MATCH_STEPS = 1 << 1,
     MATCH_ANNOTATIONS = 1 << 2,
+    MATCH_GENERATE_HINTS = 1 << 3,
+};
+
+struct ArrayString
+{
+    size_t len;
+    const uint8_t *pointer;
 };
 
 extern "C"
@@ -264,12 +271,18 @@ extern "C"
                            enum OverviewZoom overview_zoom,
                            const uint64_t *timestamps,
                            size_t num_timestamps,
-                           const double *radiuses,
-                           size_t num_radiuses,
                            enum GapsType gaps_type,
                            const size_t *waypoints,
                            size_t num_waypoints,
-                           uint8_t flags)
+                           uint8_t flags,
+                           const osrm::engine::Bearing **bearings,
+                           size_t num_bearings,
+                           const double *radiuses,
+                           size_t num_radiuses,
+                           const ArrayString *hints,
+                           size_t num_hints,
+                           const osrm::engine::Approach *approaches,
+                           size_t num_approaches)
     {
         if (!osrm_instance)
         {
@@ -309,6 +322,30 @@ extern "C"
                 params.timestamps.push_back(timestamps[i]);
             }
         }
+        if (num_waypoints > 0)
+        {
+            params.waypoints.reserve(num_waypoints);
+            for (size_t i = 0; i < num_waypoints; i++)
+            {
+                params.waypoints.push_back(waypoints[i]);
+            }
+        }
+        if (num_bearings > 0)
+        {
+            if (num_bearings != num_coordinates)
+            {
+                const char *err = "num_bearings must equal num_coordinates";
+                char *msg = new char[strlen(err) + 1];
+                strcpy(msg, err);
+                return {1, msg};
+            }
+            params.bearings.reserve(num_bearings);
+            for (size_t i = 0; i < num_bearings; i++)
+            {
+                params.bearings.push_back(*bearings[i]);
+            }
+        }
+
         if (num_radiuses > 0)
         {
             if (num_radiuses != num_coordinates)
@@ -318,21 +355,61 @@ extern "C"
                 strcpy(msg, err);
                 return {1, msg};
             }
-            params.radiuses.reserve(num_timestamps);
+            params.radiuses.reserve(num_radiuses);
             for (size_t i = 0; i < num_radiuses; i++)
             {
-                params.radiuses.push_back(radiuses[i]);
+                if (std::isinf(radiuses[i]))
+                {
+                    params.radiuses.push_back(std::nullopt);
+                }
+                else
+                {
+                    params.radiuses.push_back(radiuses[i]);
+                }
             }
         }
-        if (num_waypoints > 0)
+        if (num_hints > 0)
         {
-            params.waypoints.reserve(num_waypoints);
-            for (size_t i = 0; i < num_waypoints; i++)
+            if (num_hints != num_coordinates)
             {
-                params.waypoints.push_back(waypoints[i]);
+                const char *err = "num_hints must equal num_coordinates";
+                char *msg = new char[strlen(err) + 1];
+                strcpy(msg, err);
+                return {1, msg};
+            }
+            params.radiuses.reserve(num_hints);
+            for (size_t i = 0; i < num_hints; i++)
+            {
+                const ArrayString &h = hints[i];
+
+                if (h.pointer == nullptr || h.len == 0)
+                {
+                    params.hints.emplace_back();
+                    continue;
+                }
+
+                std::string encoded_hint(reinterpret_cast<const char *>(h.pointer), h.len);
+
+                osrm::engine::Hint hint;
+                hint.FromBase64(encoded_hint);
+                params.hints.push_back(std::move(hint));
             }
         }
-
+        if (num_approaches > 0)
+        {
+            if (num_approaches != num_coordinates)
+            {
+                const char *err = "num_approaches must equal num_coordinates";
+                char *msg = new char[strlen(err) + 1];
+                strcpy(msg, err);
+                return {1, msg};
+            }
+            params.approaches.reserve(num_approaches);
+            for (size_t i = 0; i < num_approaches; i++)
+            {
+                params.approaches.push_back(approaches[i]);
+            }
+        }
         osrm::json::Object result;
         const auto status = osrm_ptr->Match(params, result);
 

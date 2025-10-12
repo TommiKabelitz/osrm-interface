@@ -228,8 +228,7 @@ fn test_match_basic() {
     ];
 
     let match_request = MatchRequestBuilder::new(&points)
-        .geometry(GeometryType::Polyline)
-        .overview(OverviewZoom::Full)
+        .overview(OverviewZoom::False)
         .gaps(osrm_interface::r#match::MatchGapsBehaviour::Ignore)
         .build()
         .expect("Failed to create match request");
@@ -238,14 +237,4 @@ fn test_match_basic() {
         .expect("Failed to match route");
 
     assert_eq!(response.code, "Ok", "Response code is not 'Ok'");
-    println!(
-        "{:?}",
-        response
-            .matchings
-            .first()
-            .unwrap()
-            .geometry
-            .as_ref()
-            .unwrap()
-    );
 }

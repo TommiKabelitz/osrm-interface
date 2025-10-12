@@ -1,3 +1,5 @@
+use thiserror::Error;
+
 pub(crate) use crate::point::Point;
 
 #[cfg_attr(feature = "debug", derive(Debug))]
@@ -91,11 +93,15 @@ impl<'a> TableRequestBuilder<'a> {
     }
 }
 
-#[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Error, Debug)]
 pub enum TableRequestError {
+    #[error("No sources in table request")]
     EmptySources,
+    #[error("No destinations in table request")]
     EmptyDestinations,
+    #[error("Fallback speed must be greater than 0.0")]
     NonPositiveFallbackSpeed,
+    #[error("Scale factor must be greater than 0.0")]
     NonPositiveScaleFactor,
 }
 

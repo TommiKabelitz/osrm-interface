@@ -1,10 +1,11 @@
 mod osrm_engine;
-use crate::r#match::{MatchGapsBehaviour, MatchRequest};
-use crate::request_types::{GeometryType, OverviewZoom};
+use crate::r#match::{Approach, MatchGapsBehaviour, MatchRequest};
+use crate::request_types::{Bearing, GeometryType, OverviewZoom};
 use crate::route::RouteRequest;
 use crate::table::{TableAnnotation, TableFallbackCoordinate};
 pub use osrm_engine::OsrmEngine;
 
+use std::f64;
 use std::ffi::{CStr, CString, c_void};
 use std::os::raw::c_char;
 
@@ -16,11 +17,26 @@ const ROUTE_CONTINUE_STRAIGHT: u8 = 1 << 3;
 const MATCH_TIDY: u8 = 1 << 0;
 const MATCH_STEPS: u8 = 1 << 1;
 const MATCH_ANNOTATIONS: u8 = 1 << 2;
+const MATCH_GENERATE_HINTS: u8 = 1 << 3;
 
 #[repr(C)]
 struct OsrmResult {
     code: i32,
     message: *mut c_char,
+}
+
+#[repr(C)]
+struct ArrayString {
+    len: usize,
+    pointer: *const u8,
+}
+impl From<&str> for ArrayString {
+    fn from(value: &str) -> Self {
+        Self {
+            len: value.len(),
+            pointer: value.as_ptr(),
+        }
+    }
 }
 
 #[link(name = "osrm_wrapper", kind = "static")]
@@ -63,12 +79,18 @@ unsafe extern "C" {
         overview_zoom: OverviewZoom,
         timestamps: *const u64,
         num_timestamps: usize,
-        radiuses: *const f64,
-        num_radiuses: usize,
         gaps_type: MatchGapsBehaviour,
         waypoints: *const usize,
         num_waypoints: usize,
         flags: u8,
+        bearings: *const &Bearing,
+        num_bearings: usize,
+        radiuses: *const f64,
+        num_radiuses: usize,
+        hints: *const ArrayString,
+        num_hints: usize,
+        approaches: *const Approach,
+        num_approaches: usize,
     ) -> OsrmResult;
 
     fn osrm_nearest(osrm_instance: *mut c_void, long: f64, lat: f64, number: u64) -> OsrmResult;
@@ -195,10 +217,32 @@ impl Osrm {
         if match_request.annotations {
             flags |= MATCH_ANNOTATIONS;
         }
+        if match_request.generate_hints {
+            flags |= MATCH_GENERATE_HINTS
+        }
 
         let timestamps = match_request.timestamps.unwrap_or(&[]);
-        let radiuses = match_request.radiuses.unwrap_or(&[]);
         let waypoints = match_request.waypoints.unwrap_or(&[]);
+
+        let empty_bearing = Bearing::new(0, 0).unwrap();
+        let bearings = if let Some(bearings) = match_request.bearings {
+            bearings
+                .iter()
+                .map(|bearing| bearing.as_ref().unwrap_or(&empty_bearing))
+                .collect()
+        } else {
+            Vec::new()
+        };
+
+        let radiuses = match match_request.radiuses {
+            Some(rad) => rad.iter().map(|f| f.unwrap_or(f64::INFINITY)).collect(),
+            None => vec![f64::INFINITY; num_coords],
+        };
+        let hints = match match_request.hints {
+            Some(hints) => hints.iter().map(|hint| hint.unwrap_or("").into()).collect(),
+            None => Vec::new(),
+        };
+        let approaches = match_request.approaches.unwrap_or(&[]);
         let result = unsafe {
             osrm_match(
                 self.instance,
@@ -208,12 +252,18 @@ impl Osrm {
                 match_request.overview,
                 timestamps.as_ptr(),
                 timestamps.len(),
-                radiuses.as_ptr(),
-                radiuses.len(),
                 match_request.gaps,
                 waypoints.as_ptr(),
                 waypoints.len(),
                 flags,
+                bearings.as_ptr(),
+                bearings.len(),
+                radiuses.as_ptr(),
+                radiuses.len(),
+                hints.as_ptr(),
+                hints.len(),
+                approaches.as_ptr(),
+                approaches.len(),
             )
         };
 

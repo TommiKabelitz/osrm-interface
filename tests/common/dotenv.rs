@@ -1,9 +1,11 @@
 use std::{fmt::Debug, io::BufRead};
 
+use thiserror::Error;
+
 /// Load a value from a .env
 ///
 /// Scans through the file looking for a line `key=value`
-pub fn load_dotenv_value(path: &str, key: &str) -> Result<String, DotEnvError> {
+pub fn load_dotenv_value<'a>(path: &str, key: &'a str) -> Result<String, DotEnvError<'a>> {
     let file = std::fs::File::open(path).map_err(DotEnvError::DotEnvNotFound)?;
     let reader = std::io::BufReader::new(file);
 
@@ -17,26 +19,17 @@ pub fn load_dotenv_value(path: &str, key: &str) -> Result<String, DotEnvError> {
                 .map(|(_, v)| v.to_string());
         }
     }
-    Err(DotEnvError::KeyNotFound)
+    Err(DotEnvError::KeyNotFound(key))
 }
 
-pub enum DotEnvError {
+#[derive(Error, Debug)]
+pub enum DotEnvError<'a> {
+    #[error(".env not found: {0}")]
     DotEnvNotFound(std::io::Error),
+    #[error("Syntax error on line {0}")]
     SyntaxError(usize),
-    KeyNotFound,
+    #[error("Key '{0}' not found in .env")]
+    KeyNotFound(&'a str),
+    #[error("Other IO error: {0}")]
     Other(std::io::Error),
-}
-
-impl Debug for DotEnvError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::DotEnvNotFound(e) => f.debug_struct("DotEnvNotFound").field("error", &e).finish(),
-            Self::SyntaxError(l) => f
-                .debug_struct("SyntaxError")
-                .field("line_number", &l)
-                .finish(),
-            Self::KeyNotFound => f.debug_struct("KeyNotFound").finish(),
-            Self::Other(e) => f.debug_struct("Other").field("error", &e).finish(),
-        }
-    }
 }

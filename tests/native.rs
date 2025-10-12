@@ -337,7 +337,35 @@ fn test_match_basic() {
 
     let match_request = MatchRequestBuilder::new(&points)
         .geometry(GeometryType::Polyline)
-        .overview(OverviewZoom::Full)
+        .overview(OverviewZoom::False)
+        .gaps(osrm_interface::r#match::MatchGapsBehaviour::Ignore)
+        .build()
+        .expect("Failed to create match request");
+    let response = engine
+        .r#match(&match_request)
+        .expect("Failed to match route");
+
+    assert_eq!(response.code, "Ok", "Response code is not 'Ok'");
+}
+
+#[test]
+fn test_match_bearings() {
+    let engine = init_native_engine(".env");
+
+    let points = [
+        Point::new(51.097683869065804, 11.517827906178626).expect("Invalid point"),
+        Point::new(51.098737989249116, 11.526971690952534).expect("Invalid point"),
+        Point::new(51.09937599770893, 11.530571780087442).expect("Invalid point"),
+        Point::new(51.099195691869646, 11.535806265573953).expect("Invalid point"),
+        Point::new(51.09883507808152, 11.541924208526543).expect("Invalid point"),
+        Point::new(51.10019429998817, 11.547070348266445).expect("Invalid point"),
+        Point::new(51.10187286817584, 11.549241921250635).expect("Invalid point"),
+        Point::new(51.10307204569769, 11.561966320703071).expect("Invalid point"),
+    ];
+
+    let match_request = MatchRequestBuilder::new(&points)
+        .geometry(GeometryType::Polyline)
+        .overview(OverviewZoom::False)
         .gaps(osrm_interface::r#match::MatchGapsBehaviour::Ignore)
         .build()
         .expect("Failed to create match request");

@@ -1,6 +1,6 @@
 use crate::algorithm;
 use crate::errors::{NativeOsrmError, OsrmError};
-use crate::r#match::{MatchGapsBehaviour, MatchRequest, MatchResponse};
+use crate::r#match::{MatchRequest, MatchResponse};
 use crate::native::Osrm;
 use crate::nearest::NearestResponse;
 use crate::point::Point;
@@ -11,7 +11,7 @@ use crate::trip::{TripRequest, TripResponse};
 pub struct OsrmEngine {
     instance: Osrm,
 }
-
+use std::str;
 impl OsrmEngine {
     pub fn new(base_path: &str, algorithm: algorithm::Algorithm) -> Result<Self, OsrmError> {
         let osrm = Osrm::new(base_path, algorithm.as_str())
@@ -154,15 +154,6 @@ impl OsrmEngine {
     pub fn r#match(&self, match_request: &MatchRequest) -> Result<MatchResponse, OsrmError> {
         if match_request.points.is_empty() {
             return Err(OsrmError::InvalidMatchRequest);
-        }
-
-        // Collapsing the if requires an if let chain which requires
-        // rustc v1.88
-        #[allow(clippy::collapsible_if)]
-        if let MatchGapsBehaviour::Split = match_request.gaps {
-            if match_request.timestamps.is_none() {
-                return Err(OsrmError::InvalidMatchRequest);
-            }
         }
 
         let result = self

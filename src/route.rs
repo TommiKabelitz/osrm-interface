@@ -1,3 +1,5 @@
+use thiserror::Error;
+
 use crate::osrm_response_types::{Route, Waypoint};
 use crate::request_types::OverviewZoom;
 use crate::{point::Point, request_types::GeometryType};
@@ -84,8 +86,9 @@ impl<'a> RouteRequestBuilder<'a> {
     }
 }
 
-#[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Error, Debug)]
 pub enum RouteRequestError {
+    #[error("Route requires at least 2 points")]
     InsufficientPoints,
 }
 

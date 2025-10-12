@@ -7,7 +7,8 @@ fn main() {
     }
     println!("cargo:rerun-if-changed=src/wrapper.cpp");
     println!("cargo:warning=Compiling OSRM wrapper");
-    cc::Build::new()
+    let mut build = cc::Build::new();
+    build
         .cpp(true)
         .file("src/wrapper.cpp")
         .flag("-std=c++17")
@@ -15,14 +16,49 @@ fn main() {
         .include("/usr/local/include")
         .include("/usr/local/include/osrm") // Just in case includes are nested
         .define("ENABLE_LTO", "Off")
-        .define("FMT_HEADER_ONLY", None)
-        .compile("osrm_wrapper");
+        .define("FMT_HEADER_ONLY", None);
+
+    let is_debug = matches!(env::var("PROFILE").as_deref(), Ok("debug"));
+
+    let (osrm_include, osrm_lib) = if is_debug {
+        match env::var("OSRM_DEBUG_PATH") {
+            Ok(path) => {
+                println!("cargo:warning=Using DEBUG OSRM from {}", path);
+                (format!("{}/include", path), format!("{}/", path))
+            }
+            Err(_) => {
+                println!(
+                    "cargo:warning=OSRM_DEBUG_PATH not set — falling back to system /usr/local"
+                );
+                ("/usr/local/include".into(), "/usr/local/lib".into())
+            }
+        }
+    } else {
+        println!("cargo:warning=Using RELEASE OSRM from /usr/local");
+        ("/usr/local/include".into(), "/usr/local/lib".into())
+    };
+
+    build
+        .include(&osrm_include)
+        .include(format!("{}/osrm", osrm_include));
+
+    if is_debug {
+        build
+            .flag("-g")
+            .flag("-O0")
+            .flag("-fno-omit-frame-pointer")
+            .flag("-fno-inline");
+    } else {
+        build.flag("-O3").flag("-DNDEBUG");
+    }
+
+    build.compile("osrm_wrapper");
 
     // Cargo receives information about linking through print statements
     // with metadata as follows
 
     // Linking the actual OSRM library
-    println!("cargo:rustc-link-search=native=/usr/local/lib");
+    println!("cargo:rustc-link-search=native={}", osrm_lib);
 
     // Link the various osrm commands
     println!("cargo:rustc-link-lib=static=osrm");
