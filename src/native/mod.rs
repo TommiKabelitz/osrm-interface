@@ -13,6 +13,7 @@ const ROUTE_ALTERNATIVES: u8 = 1 << 0;
 const ROUTE_STEPS: u8 = 1 << 1;
 const ROUTE_ANNOTATIONS: u8 = 1 << 2;
 const ROUTE_CONTINUE_STRAIGHT: u8 = 1 << 3;
+const ROUTE_GENERATE_HINTS: u8 = 1 << 4;
 
 const MATCH_TIDY: u8 = 1 << 0;
 const MATCH_STEPS: u8 = 1 << 1;
@@ -70,6 +71,14 @@ unsafe extern "C" {
         geometry_type: GeometryType,
         overview_zoom: OverviewZoom,
         flags: u8,
+        bearings: *const &Bearing,
+        num_bearings: usize,
+        radiuses: *const f64,
+        num_radiuses: usize,
+        hints: *const ArrayString,
+        num_hints: usize,
+        approaches: *const Approach,
+        num_approaches: usize,
         excludes: *const ArrayString,
         num_excludes: usize,
     ) -> OsrmResult;
@@ -160,6 +169,26 @@ impl Osrm {
             .iter()
             .flat_map(|p| [p.longitude(), p.latitude()])
             .collect();
+        let empty_bearing = Bearing::new(0, 0).unwrap();
+        let bearings = if let Some(bearings) = route_request.bearings {
+            bearings
+                .iter()
+                .map(|bearing| bearing.as_ref().unwrap_or(&empty_bearing))
+                .collect()
+        } else {
+            Vec::new()
+        };
+
+        let radiuses = match route_request.radiuses {
+            Some(rad) => rad.iter().map(|f| f.unwrap_or(f64::INFINITY)).collect(),
+            None => vec![f64::INFINITY; num_coords],
+        };
+        let hints = match route_request.hints {
+            Some(hints) => hints.iter().map(|hint| hint.unwrap_or("").into()).collect(),
+            None => Vec::new(),
+        };
+        let approaches = route_request.approaches.unwrap_or(&[]);
+
         let excludes = match route_request.exclude {
             Some(excludes) => excludes
                 .iter()
@@ -183,6 +212,9 @@ impl Osrm {
         if route_request.continue_straight {
             flags |= ROUTE_CONTINUE_STRAIGHT;
         }
+        if route_request.generate_hints {
+            flags |= ROUTE_GENERATE_HINTS;
+        }
         let result = unsafe {
             osrm_route(
                 self.instance,
@@ -191,6 +223,14 @@ impl Osrm {
                 route_request.geometry,
                 route_request.overview,
                 flags,
+                bearings.as_ptr(),
+                bearings.len(),
+                radiuses.as_ptr(),
+                radiuses.len(),
+                hints.as_ptr(),
+                hints.len(),
+                approaches.as_ptr(),
+                approaches.len(),
                 excludes.as_ptr(),
                 excludes.len(),
             )

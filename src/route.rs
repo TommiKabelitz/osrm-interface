@@ -1,7 +1,8 @@
 use thiserror::Error;
 
+use crate::r#match::{Approach, DimensionMismatch};
 use crate::osrm_response_types::{Route, Waypoint};
-use crate::request_types::{Exclude, OverviewZoom};
+use crate::request_types::{Bearing, Exclude, OverviewZoom};
 use crate::{point::Point, request_types::GeometryType};
 
 #[derive(Clone)]
@@ -14,6 +15,11 @@ pub struct RouteRequest<'a> {
     pub(crate) overview: OverviewZoom,
     pub(crate) annotations: bool,
     pub(crate) continue_straight: bool,
+    pub(crate) bearings: Option<&'a [Option<Bearing>]>,
+    pub(crate) radiuses: Option<&'a [Option<f64>]>,
+    pub(crate) generate_hints: bool,
+    pub(crate) hints: Option<&'a [Option<&'a str>]>,
+    pub(crate) approaches: Option<&'a [Approach]>,
     pub(crate) exclude: Option<&'a [Exclude]>,
 }
 
@@ -25,6 +31,11 @@ pub struct RouteRequestBuilder<'a> {
     overview: OverviewZoom,
     annotations: bool,
     continue_straight: bool,
+    bearings: Option<&'a [Option<Bearing>]>,
+    radiuses: Option<&'a [Option<f64>]>,
+    generate_hints: bool,
+    hints: Option<&'a [Option<&'a str>]>,
+    approaches: Option<&'a [Approach]>,
     exclude: Option<&'a [Exclude]>,
 }
 
@@ -38,6 +49,11 @@ impl<'a> RouteRequestBuilder<'a> {
             steps: false,
             annotations: false,
             continue_straight: true,
+            bearings: None,
+            radiuses: None,
+            generate_hints: true,
+            hints: None,
+            approaches: None,
             exclude: None,
         }
     }
@@ -71,7 +87,30 @@ impl<'a> RouteRequestBuilder<'a> {
         self.continue_straight = val;
         self
     }
+    pub fn bearings(mut self, bearings: &'a [Option<Bearing>]) -> Self {
+        self.bearings = Some(bearings);
+        self
+    }
 
+    pub fn radiuses(mut self, coordinate_radiuses: &'a [Option<f64>]) -> Self {
+        self.radiuses = Some(coordinate_radiuses);
+        self
+    }
+
+    pub fn generate_hints(mut self, generate_hints: bool) -> Self {
+        self.generate_hints = generate_hints;
+        self
+    }
+
+    pub fn hints(mut self, coordinate_hints: &'a [Option<&'a str>]) -> Self {
+        self.hints = Some(coordinate_hints);
+        self
+    }
+
+    pub fn approaches(mut self, approach_direction: &'a [Approach]) -> Self {
+        self.approaches = Some(approach_direction);
+        self
+    }
     pub fn exclude(mut self, exclude: &'a [Exclude]) -> Self {
         self.exclude = Some(exclude);
         self
@@ -81,7 +120,40 @@ impl<'a> RouteRequestBuilder<'a> {
         if self.points.len() < 2 {
             return Err(RouteRequestError::InsufficientPoints);
         }
+        #[allow(clippy::collapsible_if)]
+        if let Some(bearings) = self.bearings {
+            if bearings.len() != self.points.len() {
+                return Err(RouteRequestError::DimensionMismatch(
+                    DimensionMismatch::Bearings,
+                ));
+            }
+        }
 
+        #[allow(clippy::collapsible_if)]
+        if let Some(radiuses) = self.radiuses {
+            if radiuses.len() != self.points.len() {
+                return Err(RouteRequestError::DimensionMismatch(
+                    DimensionMismatch::Radiuses,
+                ));
+            }
+        }
+        #[allow(clippy::collapsible_if)]
+        if let Some(hints) = self.hints {
+            if hints.len() != self.points.len() {
+                return Err(RouteRequestError::DimensionMismatch(
+                    DimensionMismatch::Hints,
+                ));
+            }
+        }
+
+        #[allow(clippy::collapsible_if)]
+        if let Some(approaches) = self.approaches {
+            if approaches.len() != self.points.len() {
+                return Err(RouteRequestError::DimensionMismatch(
+                    DimensionMismatch::Approaches,
+                ));
+            }
+        }
         #[allow(clippy::collapsible_if)]
         if let Some(exclude) = self.exclude {
             if !exclude.is_empty() {
@@ -102,6 +174,11 @@ impl<'a> RouteRequestBuilder<'a> {
             overview: self.overview,
             annotations: self.annotations,
             continue_straight: self.continue_straight,
+            bearings: self.bearings,
+            radiuses: self.radiuses,
+            generate_hints: self.generate_hints,
+            hints: self.hints,
+            approaches: self.approaches,
             exclude: self.exclude,
         })
     }
@@ -111,6 +188,8 @@ impl<'a> RouteRequestBuilder<'a> {
 pub enum RouteRequestError {
     #[error("Route requires at least 2 points")]
     InsufficientPoints,
+    #[error("Mismatch of dimensions between Points and {0:?}")]
+    DimensionMismatch(DimensionMismatch),
     #[error("Exclude types are not all of the same type")]
     DifferentExcludeTypes,
 }

@@ -91,15 +91,56 @@ impl OsrmEngine {
             .join(";");
 
         let mut url = format!(
-            "{}/route/v1/{}/{coordinates}?alternatives={}&steps={}&geometries={}&overview={}&annotations={}",
+            "{}/route/v1/{}/{coordinates}?alternatives={}&steps={}&geometries={}&overview={}&annotations={}&generate_hints={}",
             self.endpoint,
             self.profile.url_form(),
             route_request.alternatives,
             route_request.steps,
             route_request.geometry.url_form(),
             route_request.overview.url_form(),
-            route_request.annotations
+            route_request.annotations,
+            route_request.generate_hints
         );
+        if let Some(bearings) = route_request.bearings {
+            let bearings = bearings
+                .iter()
+                .map(|bearing| {
+                    if let Some(b) = bearing {
+                        b.url_form()
+                    } else {
+                        String::new()
+                    }
+                })
+                .join(";");
+            url.push_str(&format!("&bearings={}", bearings));
+        }
+        if let Some(radiuses) = route_request.radiuses {
+            let radiuses = radiuses
+                .iter()
+                .map(|r| {
+                    if let Some(r) = r {
+                        format!("{r:.12}")
+                    } else {
+                        String::new()
+                    }
+                })
+                .join(";");
+            url.push_str(&format!("&radiuses={}", radiuses));
+        }
+
+        if let Some(hints) = route_request.hints {
+            let hints = hints.iter().map(|hint| hint.unwrap_or("")).join(";");
+            url.push_str(&format!("&radiuses={}", hints));
+        }
+
+        if let Some(approaches) = route_request.approaches {
+            let approaches = approaches
+                .iter()
+                .map(|approach| approach.url_form())
+                .join(";");
+            url.push_str(&format!("&radiuses={}", approaches));
+        }
+
         if let Some(exclude) = route_request.exclude {
             let exclude = exclude
                 .iter()

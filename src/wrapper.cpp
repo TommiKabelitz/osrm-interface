@@ -19,6 +19,7 @@ enum RouteFlags : uint8_t
     ROUTE_STEPS = 1 << 1,
     ROUTE_ANNOTATIONS = 1 << 2,
     ROUTE_CONTINUE_STRAIGHT = 1 << 3,
+    ROUTE_GENERATE_HINTS = 1 << 4,
 };
 
 enum MatchFlags : uint8_t
@@ -200,7 +201,16 @@ extern "C"
                            size_t num_coordinates,
                            enum GeometryType geometry_type,
                            enum OverviewZoom overview_zoom,
-                           uint8_t flags, const ArrayString *excludes,
+                           uint8_t flags,
+                           const osrm::engine::Bearing **bearings,
+                           size_t num_bearings,
+                           const double *radiuses,
+                           size_t num_radiuses,
+                           const ArrayString *hints,
+                           size_t num_hints,
+                           const osrm::engine::Approach *approaches,
+                           size_t num_approaches,
+                           const ArrayString *excludes,
                            size_t num_excludes)
     {
         if (!osrm_instance)
@@ -226,6 +236,87 @@ extern "C"
         params.steps = (flags & ROUTE_STEPS) != 0;
         params.annotations = (flags & ROUTE_ANNOTATIONS) != 0;
         params.continue_straight = (flags & ROUTE_CONTINUE_STRAIGHT) != 0;
+        params.generate_hints = (flags & ROUTE_GENERATE_HINTS) != 0;
+        if (num_bearings > 0)
+        {
+            if (num_bearings != num_coordinates)
+            {
+                const char *err = "num_bearings must equal num_coordinates";
+                char *msg = new char[strlen(err) + 1];
+                strcpy(msg, err);
+                return {1, msg};
+            }
+            params.bearings.reserve(num_bearings);
+            for (size_t i = 0; i < num_bearings; i++)
+            {
+                params.bearings.push_back(*bearings[i]);
+            }
+        }
+
+        if (num_radiuses > 0)
+        {
+            if (num_radiuses != num_coordinates)
+            {
+                const char *err = "num_radiuses must equal num_coordinates";
+                char *msg = new char[strlen(err) + 1];
+                strcpy(msg, err);
+                return {1, msg};
+            }
+            params.radiuses.reserve(num_radiuses);
+            for (size_t i = 0; i < num_radiuses; i++)
+            {
+                if (std::isinf(radiuses[i]))
+                {
+                    params.radiuses.push_back(std::nullopt);
+                }
+                else
+                {
+                    params.radiuses.push_back(radiuses[i]);
+                }
+            }
+        }
+        if (num_hints > 0)
+        {
+            if (num_hints != num_coordinates)
+            {
+                const char *err = "num_hints must equal num_coordinates";
+                char *msg = new char[strlen(err) + 1];
+                strcpy(msg, err);
+                return {1, msg};
+            }
+            params.radiuses.reserve(num_hints);
+            for (size_t i = 0; i < num_hints; i++)
+            {
+                const ArrayString &h = hints[i];
+
+                if (h.pointer == nullptr || h.len == 0)
+                {
+                    params.hints.emplace_back();
+                    continue;
+                }
+
+                std::string encoded_hint(reinterpret_cast<const char *>(h.pointer), h.len);
+
+                osrm::engine::Hint hint;
+                hint.FromBase64(encoded_hint);
+                params.hints.push_back(std::move(hint));
+            }
+        }
+        if (num_approaches > 0)
+        {
+            if (num_approaches != num_coordinates)
+            {
+                const char *err = "num_approaches must equal num_coordinates";
+                char *msg = new char[strlen(err) + 1];
+                strcpy(msg, err);
+                return {1, msg};
+            }
+            params.approaches.reserve(num_approaches);
+            for (size_t i = 0; i < num_approaches; i++)
+            {
+                params.approaches.push_back(approaches[i]);
+            }
+        }
         if (num_excludes > 0)
         {
             params.exclude.reserve(num_excludes);
@@ -327,6 +418,7 @@ extern "C"
         params.tidy = (flags & MATCH_TIDY) != 0;
         params.steps = (flags & MATCH_STEPS) != 0;
         params.annotations = (flags & MATCH_ANNOTATIONS) != 0;
+        params.generate_hints = (flags & MATCH_GENERATE_HINTS) != 0;
         if (num_timestamps > 0)
         {
             if (num_timestamps != num_coordinates)
