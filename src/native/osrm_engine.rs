@@ -2,7 +2,7 @@ use crate::algorithm;
 use crate::errors::{NativeOsrmError, OsrmError};
 use crate::r#match::{MatchRequest, MatchResponse};
 use crate::native::Osrm;
-use crate::nearest::NearestResponse;
+use crate::nearest::{NearestRequest, NearestResponse};
 use crate::point::Point;
 use crate::route::{RouteRequest, RouteRequestBuilder, RouteResponse, SimpleRouteResponse};
 use crate::table::{TableAnnotation, TableFallbackCoordinate, TableRequest, TableResponse};
@@ -141,10 +141,10 @@ impl OsrmEngine {
         })
     }
 
-    pub fn nearest(&self, point: &Point, number: u64) -> Result<NearestResponse, OsrmError> {
+    pub fn nearest(&self, nearest_request: &NearestRequest) -> Result<NearestResponse, OsrmError> {
         let result = self
             .instance
-            .nearest(point.longitude(), point.latitude(), number)
+            .nearest(nearest_request)
             .map_err(|e| OsrmError::Native(NativeOsrmError::FfiError(e)))?;
         let nearest_response = serde_json::from_str::<NearestResponse>(&result)
             .map_err(|e| OsrmError::Native(NativeOsrmError::JsonParse(Box::new(e))))?;

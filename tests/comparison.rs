@@ -5,6 +5,7 @@ use common::{init_native_engine, init_remote_engine};
 
 use osrm_interface::{
     r#match::MatchRequestBuilder,
+    nearest::NearestRequestBuilder,
     osrm_response_types::Geometry,
     point::Point,
     request_types::{GeometryType, OverviewZoom},
@@ -85,11 +86,14 @@ fn test_compare_nearest() {
     let num_points = 3;
 
     let point = Point::new(48.040437, 10.316550).expect("Invalid point");
+    let nearest_request = NearestRequestBuilder::new(&point, num_points)
+        .build()
+        .expect("Failed to build nearest request");
     let remote_response = remote_engine
-        .nearest(&point, num_points)
+        .nearest(&nearest_request)
         .expect("Failed to find nearest");
     let native_response = native_engine
-        .nearest(&point, num_points)
+        .nearest(&nearest_request)
         .expect("Failed to find nearest");
 
     assert_eq!(

@@ -639,7 +639,13 @@ extern "C"
     OSRM_Result osrm_nearest(void *osrm_instance,
                              const double longitude,
                              const double latitude,
-                             uint64_t num_coordinates)
+                             uint64_t num_coordinates,
+                             const osrm::engine::Bearing *bearing,
+                             const double *radius,
+                             const osrm::engine::Approach *approach,
+                             const ArrayString *excludes,
+                             size_t num_excludes,
+                             const enum Snapping *snapping)
     {
 
         if (!osrm_instance)
@@ -657,6 +663,40 @@ extern "C"
         params.coordinates.push_back({osrm::util::FloatLongitude{longitude},
                                       osrm::util::FloatLatitude{latitude}});
 
+        if (bearing != NULL)
+        {
+            params.bearings = {*bearing};
+        }
+        if (radius != NULL)
+        {
+            params.radiuses.emplace_back(*radius);
+        }
+        if (approach != NULL)
+        {
+            params.approaches.emplace_back(*approach);
+        }
+        if (num_excludes > 0)
+        {
+            params.exclude.reserve(num_excludes);
+            for (size_t i = 0; i < num_excludes; i++)
+            {
+                const ArrayString &e = excludes[i];
+
+                if (e.pointer == nullptr || e.len == 0)
+                {
+                    continue;
+                }
+
+                std::string exclude_str(reinterpret_cast<const char *>(e.pointer), e.len);
+
+                osrm::engine::Hint hint;
+                params.exclude.push_back(std::move(exclude_str));
+            }
+        }
+        if (snapping != NULL)
+        {
+            params.snapping = {static_cast<osrm::engine::api::BaseParameters::SnappingType>(*snapping)};
+        }
         osrm::json::Object result;
         const auto status = osrm_ptr->Nearest(params, result);
 

@@ -1,5 +1,6 @@
 mod osrm_engine;
 use crate::r#match::{Approach, MatchGapsBehaviour, MatchRequest};
+use crate::nearest::NearestRequest;
 use crate::request_types::{Bearing, Exclude, GeometryType, OverviewZoom, Snapping};
 use crate::route::RouteRequest;
 use crate::table::{TableAnnotation, TableFallbackCoordinate};
@@ -109,7 +110,18 @@ unsafe extern "C" {
         num_excludes: usize,
     ) -> OsrmResult;
 
-    fn osrm_nearest(osrm_instance: *mut c_void, long: f64, lat: f64, number: u64) -> OsrmResult;
+    fn osrm_nearest(
+        osrm_instance: *mut c_void,
+        long: f64,
+        lat: f64,
+        number: u64,
+        bearing: *const Bearing,
+        radius: *const f64,
+        approach: *const Approach,
+        excludes: *const ArrayString,
+        num_excludes: usize,
+        snapping: *const Snapping,
+    ) -> OsrmResult;
 
     fn osrm_last_error() -> *const c_char;
     fn osrm_free_string(s: *mut c_char);
@@ -415,8 +427,44 @@ impl Osrm {
         Ok(rust_str)
     }
 
-    pub(crate) fn nearest(&self, long: f64, lat: f64, number: u64) -> Result<String, String> {
-        let result = unsafe { osrm_nearest(self.instance, long, lat, number) };
+    pub(crate) fn nearest(&self, nearest_request: &NearestRequest) -> Result<String, String> {
+        let excludes = match nearest_request.exclude {
+            Some(excludes) => excludes
+                .iter()
+                .map(|exclude| match exclude {
+                    Exclude::Bicycle(v) => v.as_str().into(),
+                    Exclude::Car(v) => v.as_str().into(),
+                })
+                .collect(),
+            None => Vec::new(),
+        };
+
+        let result = unsafe {
+            osrm_nearest(
+                self.instance,
+                nearest_request.point.latitude(),
+                nearest_request.point.longitude(),
+                nearest_request.number,
+                nearest_request
+                    .bearing
+                    .as_ref()
+                    .map_or(std::ptr::null(), |b| b as *const _),
+                nearest_request
+                    .radius
+                    .as_ref()
+                    .map_or(std::ptr::null(), |r| r as *const _),
+                nearest_request
+                    .approach
+                    .as_ref()
+                    .map_or(std::ptr::null(), |a| a as *const _),
+                excludes.as_ptr(),
+                excludes.len(),
+                nearest_request
+                    .snapping
+                    .as_ref()
+                    .map_or(std::ptr::null(), |s| s as *const _),
+            )
+        };
 
         let message_ptr = result.message;
         if message_ptr.is_null() {

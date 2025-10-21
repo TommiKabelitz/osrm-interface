@@ -27,6 +27,7 @@ pub struct MatchRequest<'a> {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone, Copy)]
 #[repr(C)]
 pub enum Approach {
     Curb,

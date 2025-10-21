@@ -2,7 +2,7 @@ use itertools::Itertools;
 
 use crate::errors::{OsrmError, RemoteOsrmError};
 use crate::r#match::{MatchRequest, MatchResponse};
-use crate::nearest::NearestResponse;
+use crate::nearest::{NearestRequest, NearestResponse};
 use crate::point::Point;
 use crate::request_types::{Exclude, Profile};
 use crate::route::{RouteRequest, RouteRequestBuilder, RouteResponse, SimpleRouteResponse};
@@ -223,15 +223,38 @@ impl OsrmEngine {
         })
     }
 
-    pub fn nearest(&self, point: &Point, number: u64) -> Result<NearestResponse, OsrmError> {
-        let url = format!(
+    pub fn nearest(&self, nearest_request: &NearestRequest) -> Result<NearestResponse, OsrmError> {
+        let mut url = format!(
             "{}/nearest/v1/{}/{:.6},{:.6}?number={}",
             self.endpoint,
             self.profile.url_form(),
-            point.longitude(),
-            point.latitude(),
-            number,
+            nearest_request.point.longitude(),
+            nearest_request.point.latitude(),
+            nearest_request.number,
         );
+        if let Some(bearing) = nearest_request.bearing {
+            url.push_str(&format!("&bearings={}", bearing.url_form()));
+        }
+        if let Some(radius) = nearest_request.radius {
+            url.push_str(&format!("&radiuses={:.12}", radius));
+        }
+        if let Some(approach) = nearest_request.approach {
+            url.push_str(&format!("&approaches={}", approach.url_form()));
+        }
+        if let Some(exclude) = nearest_request.exclude {
+            let exclude = exclude
+                .iter()
+                .map(|exclude| match &exclude {
+                    Exclude::Bicycle(v) => v.as_str(),
+                    Exclude::Car(v) => v.as_str(),
+                })
+                .join(",");
+            url.push_str(&format!("&exclude={}", exclude));
+        }
+        if let Some(snapping) = nearest_request.snapping {
+            url.push_str(&format!("&snapping={}", snapping.url_form()));
+        }
+
         let response = ureq::get(url)
             .call()
             .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))?

@@ -64,6 +64,7 @@ impl Profile {
 ///
 /// `bearing` must be in the range `[0,360]` and `range` in `[0,180]`, both
 /// inclusive.
+#[derive(Clone, Copy)]
 pub struct Bearing {
     bearing: i16,
     range: i16,
@@ -83,12 +84,14 @@ impl Bearing {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone, Copy)]
 pub enum Exclude {
     Car(CarExclude),
     Bicycle(BicycleExclude),
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone, Copy)]
 pub enum CarExclude {
     Toll,
     Motorway,
@@ -109,6 +112,7 @@ impl CarExclude {
 /// exclusion of ferry, so this is not guaranteed
 /// to work as expected, but it does exist in the code.
 #[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone, Copy)]
 pub enum BicycleExclude {
     Ferry,
 }

@@ -224,7 +224,7 @@ pub struct RouteResponse {
     /// An array of `Route` objects, ordered by descending recommendation rank
     pub routes: Vec<Route>,
     /// Array of `Waypoint` objects representing all waypoints in order. Only None
-    /// when the request is passed skip_waypoints=true
+    /// when the request is passed
     pub waypoints: Option<Vec<Waypoint>>,
 }
 

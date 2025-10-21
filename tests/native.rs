@@ -7,6 +7,7 @@ use common::init_native_engine;
 
 use osrm_interface::{
     r#match::MatchRequestBuilder,
+    nearest::NearestRequestBuilder,
     osrm_response_types::Geometry,
     point::Point,
     request_types::{Bearing, CarExclude, Exclude, GeometryType, OverviewZoom},
@@ -241,9 +242,11 @@ fn test_native_nearest() {
 
     let num_points = 3;
     let point = Point::new(48.040437, 10.316550).expect("Invalid point");
-
+    let nearest_request = NearestRequestBuilder::new(&point, num_points)
+        .build()
+        .expect("Failed to build nearest request");
     let response = engine
-        .nearest(&point, num_points)
+        .nearest(&nearest_request)
         .expect("Failed to find nearest");
 
     assert_eq!(response.code, "Ok", "Response code is not 'Ok'");
