@@ -131,7 +131,7 @@ impl OsrmEngine {
 
         if let Some(hints) = route_request.hints {
             let hints = hints.iter().map(|hint| hint.unwrap_or("")).join(";");
-            url.push_str(&format!("&radiuses={}", hints));
+            url.push_str(&format!("&hints={}", hints));
         }
 
         if let Some(approaches) = route_request.approaches {
@@ -139,7 +139,7 @@ impl OsrmEngine {
                 .iter()
                 .map(|approach| approach.url_form())
                 .join(";");
-            url.push_str(&format!("&radiuses={}", approaches));
+            url.push_str(&format!("&approaches={}", approaches));
         }
 
         if let Some(exclude) = route_request.exclude {
@@ -303,7 +303,7 @@ impl OsrmEngine {
 
         if let Some(hints) = match_request.hints {
             let hints = hints.iter().map(|hint| hint.unwrap_or("")).join(";");
-            url.push_str(&format!("&radiuses={}", hints));
+            url.push_str(&format!("&hints={}", hints));
         }
 
         if let Some(approaches) = match_request.approaches {
@@ -311,7 +311,7 @@ impl OsrmEngine {
                 .iter()
                 .map(|approach| approach.url_form())
                 .join(";");
-            url.push_str(&format!("&radiuses={}", approaches));
+            url.push_str(&format!("&approaches={}", approaches));
         }
 
         if let Some(exclude) = match_request.exclude {
