@@ -442,8 +442,8 @@ impl Osrm {
         let result = unsafe {
             osrm_nearest(
                 self.instance,
-                nearest_request.point.latitude(),
                 nearest_request.point.longitude(),
+                nearest_request.point.latitude(),
                 nearest_request.number,
                 nearest_request
                     .bearing

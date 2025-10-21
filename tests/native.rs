@@ -484,11 +484,6 @@ fn test_route_exclude() {
         normal_response.routes[0].duration, exclude_response.routes[0].duration,
         "Motorway excluded route has same duration as motorway inclusive route"
     );
-
-    println!(
-        "{} {}",
-        normal_response.routes[0].duration, exclude_response.routes[0].duration
-    )
 }
 
 #[test]
