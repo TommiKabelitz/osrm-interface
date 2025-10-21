@@ -86,16 +86,18 @@ impl OsrmEngine {
         Ok(RouteResponse {
             code: "Ok".to_string(),
             routes,
-            waypoints: route_request
-                .points
-                .iter()
-                .map(|p| Waypoint {
-                    hint: "Mock hint".to_string(),
-                    location: [p.latitude(), p.longitude()],
-                    name: "Mock name".to_string(),
-                    distance: 0.0,
-                })
-                .collect(),
+            waypoints: Some(
+                route_request
+                    .points
+                    .iter()
+                    .map(|p| Waypoint {
+                        hint: "Mock hint".to_string(),
+                        location: [p.latitude(), p.longitude()],
+                        name: "Mock name".to_string(),
+                        distance: 0.0,
+                    })
+                    .collect(),
+            ),
         })
     }
 

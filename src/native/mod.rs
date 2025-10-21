@@ -1,6 +1,6 @@
 mod osrm_engine;
 use crate::r#match::{Approach, MatchGapsBehaviour, MatchRequest};
-use crate::request_types::{Bearing, Exclude, GeometryType, OverviewZoom};
+use crate::request_types::{Bearing, Exclude, GeometryType, OverviewZoom, Snapping};
 use crate::route::RouteRequest;
 use crate::table::{TableAnnotation, TableFallbackCoordinate};
 pub use osrm_engine::OsrmEngine;
@@ -14,6 +14,7 @@ const ROUTE_STEPS: u8 = 1 << 1;
 const ROUTE_ANNOTATIONS: u8 = 1 << 2;
 const ROUTE_CONTINUE_STRAIGHT: u8 = 1 << 3;
 const ROUTE_GENERATE_HINTS: u8 = 1 << 4;
+const ROUTE_SKIP_WAYPOINTS: u8 = 1 << 5;
 
 const MATCH_TIDY: u8 = 1 << 0;
 const MATCH_STEPS: u8 = 1 << 1;
@@ -81,6 +82,7 @@ unsafe extern "C" {
         num_approaches: usize,
         excludes: *const ArrayString,
         num_excludes: usize,
+        snapping: Snapping,
     ) -> OsrmResult;
 
     fn osrm_match(
@@ -199,6 +201,7 @@ impl Osrm {
                 .collect(),
             None => Vec::new(),
         };
+        let snapping = route_request.snapping.unwrap_or(Snapping::Default);
         let mut flags: u8 = 0;
         if route_request.alternatives {
             flags |= ROUTE_ALTERNATIVES;
@@ -214,6 +217,9 @@ impl Osrm {
         }
         if route_request.generate_hints {
             flags |= ROUTE_GENERATE_HINTS;
+        }
+        if route_request.skip_waypoints {
+            flags |= ROUTE_SKIP_WAYPOINTS;
         }
         let result = unsafe {
             osrm_route(
@@ -233,6 +239,7 @@ impl Osrm {
                 approaches.len(),
                 excludes.as_ptr(),
                 excludes.len(),
+                snapping,
             )
         };
 

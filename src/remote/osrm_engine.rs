@@ -91,7 +91,7 @@ impl OsrmEngine {
             .join(";");
 
         let mut url = format!(
-            "{}/route/v1/{}/{coordinates}?alternatives={}&steps={}&geometries={}&overview={}&annotations={}&generate_hints={}",
+            "{}/route/v1/{}/{coordinates}?alternatives={}&steps={}&geometries={}&overview={}&annotations={}&generate_hints={}&skip_waypoints={}",
             self.endpoint,
             self.profile.url_form(),
             route_request.alternatives,
@@ -99,7 +99,8 @@ impl OsrmEngine {
             route_request.geometry.url_form(),
             route_request.overview.url_form(),
             route_request.annotations,
-            route_request.generate_hints
+            route_request.generate_hints,
+            route_request.skip_waypoints,
         );
         if let Some(bearings) = route_request.bearings {
             let bearings = bearings
@@ -151,7 +152,9 @@ impl OsrmEngine {
                 .join(",");
             url.push_str(&format!("&exclude={}", exclude));
         }
-        println!("{url}");
+        if let Some(snapping) = route_request.snapping {
+            url.push_str(&format!("&snapping={}", snapping.url_form()));
+        }
         let response = ureq::get(url)
             .call()
             .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))?

@@ -20,6 +20,7 @@ enum RouteFlags : uint8_t
     ROUTE_ANNOTATIONS = 1 << 2,
     ROUTE_CONTINUE_STRAIGHT = 1 << 3,
     ROUTE_GENERATE_HINTS = 1 << 4,
+    ROUTE_SKIP_WAYPOINTS = 1 << 5,
 };
 
 enum MatchFlags : uint8_t
@@ -46,6 +47,12 @@ extern "C"
         GeometryType_Polyline = 0,
         GeometryType_Polyline6 = 1,
         GeometryType_GeoJSON = 2,
+    };
+
+    enum Snapping
+    {
+        Snapping_Default = 0,
+        Snapping_Any = 1,
     };
 
     enum OverviewZoom
@@ -211,7 +218,8 @@ extern "C"
                            const osrm::engine::Approach *approaches,
                            size_t num_approaches,
                            const ArrayString *excludes,
-                           size_t num_excludes)
+                           size_t num_excludes,
+                           enum Snapping snapping)
     {
         if (!osrm_instance)
         {
@@ -237,6 +245,8 @@ extern "C"
         params.annotations = (flags & ROUTE_ANNOTATIONS) != 0;
         params.continue_straight = (flags & ROUTE_CONTINUE_STRAIGHT) != 0;
         params.generate_hints = (flags & ROUTE_GENERATE_HINTS) != 0;
+        params.skip_waypoints = (flags & ROUTE_SKIP_WAYPOINTS) != 0;
+        params.snapping = static_cast<osrm::engine::api::BaseParameters::SnappingType>(snapping);
         if (num_bearings > 0)
         {
             if (num_bearings != num_coordinates)

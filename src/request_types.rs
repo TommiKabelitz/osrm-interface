@@ -120,3 +120,19 @@ impl BicycleExclude {
         }
     }
 }
+
+#[derive(Clone, Copy)]
+#[cfg_attr(feature = "debug", derive(Debug))]
+#[repr(C)]
+pub enum Snapping {
+    Default = 0,
+    Any = 1,
+}
+impl Snapping {
+    pub fn url_form(&self) -> &'static str {
+        match self {
+            Self::Default => "default",
+            Self::Any => "any",
+        }
+    }
+}

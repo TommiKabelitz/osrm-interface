@@ -2,7 +2,7 @@ use thiserror::Error;
 
 use crate::r#match::{Approach, DimensionMismatch};
 use crate::osrm_response_types::{Route, Waypoint};
-use crate::request_types::{Bearing, Exclude, OverviewZoom};
+use crate::request_types::{Bearing, Exclude, OverviewZoom, Snapping};
 use crate::{point::Point, request_types::GeometryType};
 
 #[derive(Clone)]
@@ -21,6 +21,8 @@ pub struct RouteRequest<'a> {
     pub(crate) hints: Option<&'a [Option<&'a str>]>,
     pub(crate) approaches: Option<&'a [Approach]>,
     pub(crate) exclude: Option<&'a [Exclude]>,
+    pub(crate) snapping: Option<Snapping>,
+    pub(crate) skip_waypoints: bool,
 }
 
 pub struct RouteRequestBuilder<'a> {
@@ -37,6 +39,8 @@ pub struct RouteRequestBuilder<'a> {
     hints: Option<&'a [Option<&'a str>]>,
     approaches: Option<&'a [Approach]>,
     exclude: Option<&'a [Exclude]>,
+    snapping: Option<Snapping>,
+    skip_waypoints: bool,
 }
 
 impl<'a> RouteRequestBuilder<'a> {
@@ -55,6 +59,8 @@ impl<'a> RouteRequestBuilder<'a> {
             hints: None,
             approaches: None,
             exclude: None,
+            snapping: None,
+            skip_waypoints: false,
         }
     }
 
@@ -113,6 +119,16 @@ impl<'a> RouteRequestBuilder<'a> {
     }
     pub fn exclude(mut self, exclude: &'a [Exclude]) -> Self {
         self.exclude = Some(exclude);
+        self
+    }
+
+    pub fn snapping(mut self, snapping: Snapping) -> Self {
+        self.snapping = Some(snapping);
+        self
+    }
+
+    pub fn skip_waypoints(mut self, skip_waypoints: bool) -> Self {
+        self.skip_waypoints = skip_waypoints;
         self
     }
 
@@ -180,6 +196,8 @@ impl<'a> RouteRequestBuilder<'a> {
             hints: self.hints,
             approaches: self.approaches,
             exclude: self.exclude,
+            snapping: self.snapping,
+            skip_waypoints: self.skip_waypoints,
         })
     }
 }
@@ -205,8 +223,9 @@ pub struct RouteResponse {
     pub code: String,
     /// An array of `Route` objects, ordered by descending recommendation rank
     pub routes: Vec<Route>,
-    /// Array of `Waypoint` objects representing all waypoints in order
-    pub waypoints: Vec<Waypoint>,
+    /// Array of `Waypoint` objects representing all waypoints in order. Only None
+    /// when the request is passed skip_waypoints=true
+    pub waypoints: Option<Vec<Waypoint>>,
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]

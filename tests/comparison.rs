@@ -56,8 +56,8 @@ fn test_native_and_remote_route() {
         "Route response lengths disagree"
     );
     assert_eq!(
-        native_response.waypoints.len(),
-        remote_response.waypoints.len(),
+        native_response.waypoints.unwrap().len(),
+        remote_response.waypoints.unwrap().len(),
         "Different numbers of waypoints",
     );
 

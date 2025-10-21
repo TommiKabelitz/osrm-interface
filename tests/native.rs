@@ -487,3 +487,27 @@ fn test_route_exclude() {
         normal_response.routes[0].duration, exclude_response.routes[0].duration
     )
 }
+
+#[test]
+fn test_route_skip_waypoints() {
+    let engine = init_native_engine(".env");
+
+    let points = [
+        Point::new(51.08460070137968, 13.693104319460645).expect("Invalid point"),
+        Point::new(51.10033848278219, 13.715837111172739).expect("Invalid point"),
+    ];
+
+    let route_request = RouteRequestBuilder::new(&points)
+        .geometry(GeometryType::Polyline)
+        .overview(OverviewZoom::False)
+        .skip_waypoints(true)
+        .build()
+        .expect("Failed to create route request");
+    let response = engine.route(&route_request).expect("Failed to route");
+
+    assert_eq!(response.code, "Ok", "Response code is not 'Ok'");
+    assert!(
+        response.waypoints.is_none(),
+        "Waypoints were returned despite skip_waypoints=true"
+    )
+}
