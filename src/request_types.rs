@@ -81,3 +81,42 @@ impl Bearing {
         format!("{},{}", self.bearing, self.range)
     }
 }
+
+#[cfg_attr(feature = "debug", derive(Debug))]
+pub enum Exclude {
+    Car(CarExclude),
+    Bicycle(BicycleExclude),
+}
+
+#[cfg_attr(feature = "debug", derive(Debug))]
+pub enum CarExclude {
+    Toll,
+    Motorway,
+    Ferry,
+}
+
+impl CarExclude {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Toll => "toll",
+            Self::Motorway => "motorway",
+            Self::Ferry => "ferry",
+        }
+    }
+}
+
+/// The default Bike profile does not enable
+/// exclusion of ferry, so this is not guaranteed
+/// to work as expected, but it does exist in the code.
+#[cfg_attr(feature = "debug", derive(Debug))]
+pub enum BicycleExclude {
+    Ferry,
+}
+
+impl BicycleExclude {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Ferry => "ferry",
+        }
+    }
+}

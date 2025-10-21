@@ -4,7 +4,7 @@ use crate::errors::{OsrmError, RemoteOsrmError};
 use crate::r#match::{MatchRequest, MatchResponse};
 use crate::nearest::NearestResponse;
 use crate::point::Point;
-use crate::request_types::Profile;
+use crate::request_types::{Exclude, Profile};
 use crate::route::{RouteRequest, RouteRequestBuilder, RouteResponse, SimpleRouteResponse};
 use crate::table::{TableAnnotation, TableRequest, TableResponse};
 use crate::trip::{TripRequest, TripResponse};
@@ -90,7 +90,7 @@ impl OsrmEngine {
             .map(|p| format!("{:.6},{:.6}", p.longitude(), p.latitude()))
             .join(";");
 
-        let url = format!(
+        let mut url = format!(
             "{}/route/v1/{}/{coordinates}?alternatives={}&steps={}&geometries={}&overview={}&annotations={}",
             self.endpoint,
             self.profile.url_form(),
@@ -100,6 +100,17 @@ impl OsrmEngine {
             route_request.overview.url_form(),
             route_request.annotations
         );
+        if let Some(exclude) = route_request.exclude {
+            let exclude = exclude
+                .iter()
+                .map(|exclude| match &exclude {
+                    Exclude::Bicycle(v) => v.as_str(),
+                    Exclude::Car(v) => v.as_str(),
+                })
+                .join(",");
+            url.push_str(&format!("&exclude={}", exclude));
+        }
+        println!("{url}");
         let response = ureq::get(url)
             .call()
             .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))?
@@ -257,6 +268,17 @@ impl OsrmEngine {
                 .map(|approach| approach.url_form())
                 .join(";");
             url.push_str(&format!("&radiuses={}", approaches));
+        }
+
+        if let Some(exclude) = match_request.exclude {
+            let exclude = exclude
+                .iter()
+                .map(|exclude| match &exclude {
+                    Exclude::Bicycle(v) => v.as_str(),
+                    Exclude::Car(v) => v.as_str(),
+                })
+                .join(",");
+            url.push_str(&format!("&exclude={}", exclude));
         }
 
         let response = ureq::get(url)

@@ -200,7 +200,8 @@ extern "C"
                            size_t num_coordinates,
                            enum GeometryType geometry_type,
                            enum OverviewZoom overview_zoom,
-                           uint8_t flags)
+                           uint8_t flags, const ArrayString *excludes,
+                           size_t num_excludes)
     {
         if (!osrm_instance)
         {
@@ -225,7 +226,24 @@ extern "C"
         params.steps = (flags & ROUTE_STEPS) != 0;
         params.annotations = (flags & ROUTE_ANNOTATIONS) != 0;
         params.continue_straight = (flags & ROUTE_CONTINUE_STRAIGHT) != 0;
+        if (num_excludes > 0)
+        {
+            params.exclude.reserve(num_excludes);
+            for (size_t i = 0; i < num_excludes; i++)
+            {
+                const ArrayString &e = excludes[i];
 
+                if (e.pointer == nullptr || e.len == 0)
+                {
+                    continue;
+                }
+
+                std::string exclude_str(reinterpret_cast<const char *>(e.pointer), e.len);
+
+                osrm::engine::Hint hint;
+                params.exclude.push_back(std::move(exclude_str));
+            }
+        }
         osrm::json::Object result;
         const auto status = osrm_ptr->Route(params, result);
 
@@ -282,7 +300,9 @@ extern "C"
                            const ArrayString *hints,
                            size_t num_hints,
                            const osrm::engine::Approach *approaches,
-                           size_t num_approaches)
+                           size_t num_approaches,
+                           const ArrayString *excludes,
+                           size_t num_excludes)
     {
         if (!osrm_instance)
         {
@@ -408,6 +428,24 @@ extern "C"
             for (size_t i = 0; i < num_approaches; i++)
             {
                 params.approaches.push_back(approaches[i]);
+            }
+        }
+        if (num_excludes > 0)
+        {
+            params.exclude.reserve(num_excludes);
+            for (size_t i = 0; i < num_excludes; i++)
+            {
+                const ArrayString &e = excludes[i];
+
+                if (e.pointer == nullptr || e.len == 0)
+                {
+                    continue;
+                }
+
+                std::string exclude_str(reinterpret_cast<const char *>(e.pointer), e.len);
+
+                osrm::engine::Hint hint;
+                params.exclude.push_back(std::move(exclude_str));
             }
         }
         osrm::json::Object result;

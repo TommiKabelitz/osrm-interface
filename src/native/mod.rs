@@ -1,6 +1,6 @@
 mod osrm_engine;
 use crate::r#match::{Approach, MatchGapsBehaviour, MatchRequest};
-use crate::request_types::{Bearing, GeometryType, OverviewZoom};
+use crate::request_types::{Bearing, Exclude, GeometryType, OverviewZoom};
 use crate::route::RouteRequest;
 use crate::table::{TableAnnotation, TableFallbackCoordinate};
 pub use osrm_engine::OsrmEngine;
@@ -25,6 +25,7 @@ struct OsrmResult {
     message: *mut c_char,
 }
 
+#[derive(Debug)]
 #[repr(C)]
 struct ArrayString {
     len: usize,
@@ -69,6 +70,8 @@ unsafe extern "C" {
         geometry_type: GeometryType,
         overview_zoom: OverviewZoom,
         flags: u8,
+        excludes: *const ArrayString,
+        num_excludes: usize,
     ) -> OsrmResult;
 
     fn osrm_match(
@@ -91,6 +94,8 @@ unsafe extern "C" {
         num_hints: usize,
         approaches: *const Approach,
         num_approaches: usize,
+        excludes: *const ArrayString,
+        num_excludes: usize,
     ) -> OsrmResult;
 
     fn osrm_nearest(osrm_instance: *mut c_void, long: f64, lat: f64, number: u64) -> OsrmResult;
@@ -155,7 +160,16 @@ impl Osrm {
             .iter()
             .flat_map(|p| [p.longitude(), p.latitude()])
             .collect();
-
+        let excludes = match route_request.exclude {
+            Some(excludes) => excludes
+                .iter()
+                .map(|exclude| match exclude {
+                    Exclude::Bicycle(v) => v.as_str().into(),
+                    Exclude::Car(v) => v.as_str().into(),
+                })
+                .collect(),
+            None => Vec::new(),
+        };
         let mut flags: u8 = 0;
         if route_request.alternatives {
             flags |= ROUTE_ALTERNATIVES;
@@ -177,6 +191,8 @@ impl Osrm {
                 route_request.geometry,
                 route_request.overview,
                 flags,
+                excludes.as_ptr(),
+                excludes.len(),
             )
         };
 
@@ -243,6 +259,17 @@ impl Osrm {
             None => Vec::new(),
         };
         let approaches = match_request.approaches.unwrap_or(&[]);
+        let excludes = match match_request.exclude {
+            Some(excludes) => excludes
+                .iter()
+                .map(|exclude| match exclude {
+                    Exclude::Bicycle(v) => v.as_str().into(),
+                    Exclude::Car(v) => v.as_str().into(),
+                })
+                .collect(),
+            None => Vec::new(),
+        };
+
         let result = unsafe {
             osrm_match(
                 self.instance,
@@ -264,6 +291,8 @@ impl Osrm {
                 hints.len(),
                 approaches.as_ptr(),
                 approaches.len(),
+                excludes.as_ptr(),
+                excludes.len(),
             )
         };
 

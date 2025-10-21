@@ -7,7 +7,7 @@ use osrm_interface::{
     r#match::MatchRequestBuilder,
     osrm_response_types::Geometry,
     point::Point,
-    request_types::{GeometryType, OverviewZoom},
+    request_types::{CarExclude, Exclude, GeometryType, OverviewZoom},
     route::RouteRequestBuilder,
     table::TableRequestBuilder,
     trip::TripRequestBuilder,
@@ -237,4 +237,47 @@ fn test_match_basic() {
         .expect("Failed to match route");
 
     assert_eq!(response.code, "Ok", "Response code is not 'Ok'");
+}
+
+#[test]
+fn test_route_exclude() {
+    let engine = init_remote_engine(".env");
+
+    // // Very short example entirely within Dresden
+    // let points = [
+    //     Point::new(51.08460070137968, 13.693104319460645).expect("Invalid point"),
+    //     Point::new(51.10033848278219, 13.715837111172739).expect("Invalid point"),
+    // ];
+    // // Longer example from Dresden to Meissen
+    // let points = [
+    //     Point::new(51.084772300037436, 13.692948885858327).expect("Invalid point"),
+    //     Point::new(51.16327210863313, 13.481085200778807).expect("Invalid point"),
+    // ];
+    // Very long example from Kiel to Munich
+    let points = [
+        Point::new(54.32049240451713, 10.125531530445544).expect("Invalid point"),
+        Point::new(48.139305460041165, 11.579353374415504).expect("Invalid point"),
+    ];
+
+    let route_request = RouteRequestBuilder::new(&points)
+        .geometry(GeometryType::Polyline)
+        .overview(OverviewZoom::Full)
+        .build()
+        .expect("Failed to create route request");
+    let normal_response = engine.route(&route_request).expect("Failed to route");
+
+    let route_request = RouteRequestBuilder::new(&points)
+        .geometry(GeometryType::Polyline)
+        .overview(OverviewZoom::Full)
+        .exclude(&[Exclude::Car(CarExclude::Motorway)])
+        .build()
+        .expect("Failed to create route request");
+    let exclude_response = engine.route(&route_request).expect("Failed to route");
+
+    assert_eq!(normal_response.code, "Ok", "Response code is not 'Ok'");
+    assert_eq!(exclude_response.code, "Ok", "Response code is not 'Ok'");
+    assert_ne!(
+        normal_response.routes[0].duration, exclude_response.routes[0].duration,
+        "Motorway excluded route has same duration as motorway inclusive route"
+    )
 }

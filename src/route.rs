@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 use crate::osrm_response_types::{Route, Waypoint};
-use crate::request_types::OverviewZoom;
+use crate::request_types::{Exclude, OverviewZoom};
 use crate::{point::Point, request_types::GeometryType};
 
 #[derive(Clone)]
@@ -14,6 +14,7 @@ pub struct RouteRequest<'a> {
     pub(crate) overview: OverviewZoom,
     pub(crate) annotations: bool,
     pub(crate) continue_straight: bool,
+    pub(crate) exclude: Option<&'a [Exclude]>,
 }
 
 pub struct RouteRequestBuilder<'a> {
@@ -24,6 +25,7 @@ pub struct RouteRequestBuilder<'a> {
     overview: OverviewZoom,
     annotations: bool,
     continue_straight: bool,
+    exclude: Option<&'a [Exclude]>,
 }
 
 impl<'a> RouteRequestBuilder<'a> {
@@ -36,6 +38,7 @@ impl<'a> RouteRequestBuilder<'a> {
             steps: false,
             annotations: false,
             continue_straight: true,
+            exclude: None,
         }
     }
 
@@ -69,9 +72,26 @@ impl<'a> RouteRequestBuilder<'a> {
         self
     }
 
+    pub fn exclude(mut self, exclude: &'a [Exclude]) -> Self {
+        self.exclude = Some(exclude);
+        self
+    }
+
     pub fn build(self) -> Result<RouteRequest<'a>, RouteRequestError> {
         if self.points.len() < 2 {
             return Err(RouteRequestError::InsufficientPoints);
+        }
+
+        #[allow(clippy::collapsible_if)]
+        if let Some(exclude) = self.exclude {
+            if !exclude.is_empty() {
+                if !match exclude[0] {
+                    Exclude::Car(_) => exclude.iter().all(|e| matches!(e, Exclude::Car(_))),
+                    Exclude::Bicycle(_) => exclude.iter().all(|e| matches!(e, Exclude::Bicycle(_))),
+                } {
+                    return Err(RouteRequestError::DifferentExcludeTypes);
+                }
+            }
         }
 
         Ok(RouteRequest {
@@ -82,6 +102,7 @@ impl<'a> RouteRequestBuilder<'a> {
             overview: self.overview,
             annotations: self.annotations,
             continue_straight: self.continue_straight,
+            exclude: self.exclude,
         })
     }
 }
@@ -90,8 +111,11 @@ impl<'a> RouteRequestBuilder<'a> {
 pub enum RouteRequestError {
     #[error("Route requires at least 2 points")]
     InsufficientPoints,
+    #[error("Exclude types are not all of the same type")]
+    DifferentExcludeTypes,
 }
 
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
     derive(serde::Deserialize)

@@ -3,7 +3,7 @@ use thiserror::Error;
 use crate::{
     osrm_response_types::{MatchRoute, MatchWaypoint},
     point::Point,
-    request_types::{Bearing, GeometryType, OverviewZoom},
+    request_types::{Bearing, Exclude, GeometryType, OverviewZoom},
 };
 
 #[derive(Clone)]
@@ -23,6 +23,7 @@ pub struct MatchRequest<'a> {
     pub(crate) generate_hints: bool,
     pub(crate) hints: Option<&'a [Option<&'a str>]>,
     pub(crate) approaches: Option<&'a [Approach]>,
+    pub(crate) exclude: Option<&'a [Exclude]>,
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
@@ -57,6 +58,7 @@ pub struct MatchRequestBuilder<'a> {
     generate_hints: bool,
     hints: Option<&'a [Option<&'a str>]>,
     approaches: Option<&'a [Approach]>,
+    exclude: Option<&'a [Exclude]>,
 }
 
 impl<'a> MatchRequestBuilder<'a> {
@@ -76,6 +78,7 @@ impl<'a> MatchRequestBuilder<'a> {
             generate_hints: true,
             hints: None,
             approaches: None,
+            exclude: None,
         }
     }
 
@@ -141,6 +144,11 @@ impl<'a> MatchRequestBuilder<'a> {
 
     pub fn approaches(mut self, approach_direction: &'a [Approach]) -> Self {
         self.approaches = Some(approach_direction);
+        self
+    }
+
+    pub fn exclude(mut self, exclude: &'a [Exclude]) -> Self {
+        self.exclude = Some(exclude);
         self
     }
 
@@ -212,6 +220,18 @@ impl<'a> MatchRequestBuilder<'a> {
             }
         }
 
+        #[allow(clippy::collapsible_if)]
+        if let Some(exclude) = self.exclude {
+            if !exclude.is_empty() {
+                if !match exclude[0] {
+                    Exclude::Car(_) => exclude.iter().all(|e| matches!(e, Exclude::Car(_))),
+                    Exclude::Bicycle(_) => exclude.iter().all(|e| matches!(e, Exclude::Bicycle(_))),
+                } {
+                    return Err(MatchRequestError::DifferentExcludeTypes);
+                }
+            }
+        }
+
         Ok(MatchRequest {
             points: self.points,
             steps: self.steps,
@@ -227,6 +247,7 @@ impl<'a> MatchRequestBuilder<'a> {
             generate_hints: self.generate_hints,
             hints: self.hints,
             approaches: self.approaches,
+            exclude: self.exclude,
         })
     }
 }
@@ -245,6 +266,8 @@ pub enum MatchRequestError {
     EmptyWaypoints,
     #[error("Waypoints contain index {0} which is out of bounds for points with size {1}")]
     WaypointIndexOutOfBounds(usize, usize),
+    #[error("Exclude types are not all of the same type")]
+    DifferentExcludeTypes,
 }
 
 #[derive(Debug)]
