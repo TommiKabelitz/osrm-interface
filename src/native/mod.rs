@@ -4,6 +4,7 @@ use crate::nearest::NearestRequest;
 use crate::request_types::{Bearing, Exclude, GeometryType, OverviewZoom, Snapping};
 use crate::route::RouteRequest;
 use crate::table::{TableAnnotation, TableFallbackCoordinate, TableRequest};
+use crate::trip::{TripDestination, TripRequest, TripSource};
 pub use osrm_engine::OsrmEngine;
 
 use std::f64;
@@ -21,6 +22,12 @@ const MATCH_TIDY: u8 = 1 << 0;
 const MATCH_STEPS: u8 = 1 << 1;
 const MATCH_ANNOTATIONS: u8 = 1 << 2;
 const MATCH_GENERATE_HINTS: u8 = 1 << 3;
+
+const TRIP_STEPS: u8 = 1 << 0;
+const TRIP_ANNOTATIONS: u8 = 1 << 1;
+const TRIP_GENERATE_HINTS: u8 = 1 << 2;
+const TRIP_SKIP_WAYPOINTS: u8 = 1 << 3;
+const TRIP_ROUNDTRIP: u8 = 1 << 4;
 
 #[repr(C)]
 struct OsrmResult {
@@ -79,6 +86,22 @@ unsafe extern "C" {
         osrm_instance: *mut c_void,
         coordinates: *const f64,
         num_coordinates: usize,
+        geometry_type: GeometryType,
+        overview_zoom: OverviewZoom,
+        source: TripSource,
+        destination: TripDestination,
+        flags: u8,
+        bearings: *const Bearing,
+        num_bearings: usize,
+        radiuses: *const f64,
+        num_radiuses: usize,
+        hints: *const ArrayString,
+        num_hints: usize,
+        approaches: *const Approach,
+        num_approaches: usize,
+        excludes: *const ArrayString,
+        num_excludes: usize,
+        snapping: Snapping,
     ) -> OsrmResult;
 
     fn osrm_route(
@@ -165,12 +188,84 @@ impl Osrm {
         }
     }
 
-    pub(crate) fn trip(&self, coordinates: &[(f64, f64)]) -> Result<String, String> {
-        let coords: Vec<f64> = coordinates
+    pub(crate) fn trip(&self, trip_request: &TripRequest) -> Result<String, String> {
+        let num_coords = trip_request.points.len();
+        let coords: Vec<f64> = trip_request
+            .points
             .iter()
-            .flat_map(|&(lon, lat)| vec![lon, lat])
+            .flat_map(|p| [p.longitude(), p.latitude()])
             .collect();
-        let result = unsafe { osrm_trip(self.instance, coords.as_ptr(), coordinates.len()) };
+
+        let bearings = if let Some(bearings) = trip_request.bearings {
+            bearings
+                .iter()
+                .map(|bearing| bearing.unwrap_or_default())
+                .collect()
+        } else {
+            Vec::new()
+        };
+
+        let radiuses = match trip_request.radiuses {
+            Some(rad) => rad.iter().map(|f| f.unwrap_or(f64::INFINITY)).collect(),
+            None => vec![f64::INFINITY; num_coords],
+        };
+        let hints = match trip_request.hints {
+            Some(hints) => hints.iter().map(|hint| hint.unwrap_or("").into()).collect(),
+            None => Vec::new(),
+        };
+        let approaches = trip_request.approaches.unwrap_or(&[]);
+
+        let excludes = match trip_request.exclude {
+            Some(excludes) => excludes
+                .iter()
+                .map(|exclude| match exclude {
+                    Exclude::Bicycle(v) => v.as_str().into(),
+                    Exclude::Car(v) => v.as_str().into(),
+                })
+                .collect(),
+            None => Vec::new(),
+        };
+        let snapping = trip_request.snapping.unwrap_or(Snapping::Default);
+        let mut flags: u8 = 0;
+        if trip_request.steps {
+            flags |= TRIP_STEPS;
+        }
+        if trip_request.annotations {
+            flags |= TRIP_ANNOTATIONS;
+        }
+        if trip_request.generate_hints {
+            flags |= TRIP_GENERATE_HINTS;
+        }
+        if trip_request.skip_waypoints {
+            flags |= TRIP_SKIP_WAYPOINTS;
+        }
+        if trip_request.roundtrip {
+            flags |= TRIP_ROUNDTRIP;
+        }
+
+        let result = unsafe {
+            osrm_trip(
+                self.instance,
+                coords.as_ptr(),
+                num_coords,
+                trip_request.geometry,
+                trip_request.overview,
+                trip_request.source,
+                trip_request.destination,
+                flags,
+                bearings.as_ptr(),
+                bearings.len(),
+                radiuses.as_ptr(),
+                radiuses.len(),
+                hints.as_ptr(),
+                hints.len(),
+                approaches.as_ptr(),
+                approaches.len(),
+                excludes.as_ptr(),
+                excludes.len(),
+                snapping,
+            )
+        };
 
         let message_ptr = result.message;
         if message_ptr.is_null() {

@@ -360,15 +360,75 @@ impl OsrmEngine {
             .map(|p| format!("{:.6},{:.6}", p.longitude(), p.latitude()))
             .join(";");
 
-        let url = format!(
-            "{}/trip/v1/{}/{coordinates}?steps={}&geometries={}&overview={}&annotations={}",
+        let mut url = format!(
+            "{}/trip/v1/{}/{coordinates}?steps={}&geometries={}&overview={}&annotations={}&roundtrip={}&source={}&destination={}&generate_hints={}&skip_waypoints={}",
             self.endpoint,
             self.profile.url_form(),
             trip_request.steps,
             trip_request.geometry.url_form(),
             trip_request.overview.url_form(),
-            trip_request.annotations
+            trip_request.annotations,
+            trip_request.roundtrip,
+            trip_request.source.url_form(),
+            trip_request.destination.url_form(),
+            trip_request.generate_hints,
+            trip_request.skip_waypoints,
         );
+
+        if let Some(bearings) = trip_request.bearings {
+            let bearings = bearings
+                .iter()
+                .map(|bearing| {
+                    if let Some(b) = bearing {
+                        b.url_form()
+                    } else {
+                        String::new()
+                    }
+                })
+                .join(";");
+            url.push_str(&format!("&bearings={}", bearings));
+        }
+        if let Some(radiuses) = trip_request.radiuses {
+            let radiuses = radiuses
+                .iter()
+                .map(|r| {
+                    if let Some(r) = r {
+                        format!("{r:.12}")
+                    } else {
+                        String::new()
+                    }
+                })
+                .join(";");
+            url.push_str(&format!("&radiuses={}", radiuses));
+        }
+
+        if let Some(hints) = trip_request.hints {
+            let hints = hints.iter().map(|hint| hint.unwrap_or("")).join(";");
+            url.push_str(&format!("&hints={}", hints));
+        }
+
+        if let Some(approaches) = trip_request.approaches {
+            let approaches = approaches
+                .iter()
+                .map(|approach| approach.url_form())
+                .join(";");
+            url.push_str(&format!("&approaches={}", approaches));
+        }
+
+        if let Some(exclude) = trip_request.exclude {
+            let exclude = exclude
+                .iter()
+                .map(|exclude| match &exclude {
+                    Exclude::Bicycle(v) => v.as_str(),
+                    Exclude::Car(v) => v.as_str(),
+                })
+                .join(",");
+            url.push_str(&format!("&exclude={}", exclude));
+        }
+        if let Some(snapping) = trip_request.snapping {
+            url.push_str(&format!("&snapping={}", snapping.url_form()));
+        }
+
         let response = ureq::get(url)
             .call()
             .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))?

@@ -41,19 +41,10 @@ impl OsrmEngine {
             .map_err(|e| OsrmError::Native(NativeOsrmError::JsonParse(Box::new(e))))
     }
 
-    pub fn trip(&self, trip_request: TripRequest) -> Result<TripResponse, OsrmError> {
-        let len = trip_request.points.len();
-        if len == 0 {
-            return Err(OsrmError::InvalidTripRequest);
-        }
-        let coordinates: &[(f64, f64)] = &trip_request
-            .points
-            .iter()
-            .map(|p| (p.longitude(), p.latitude()))
-            .collect::<Vec<(f64, f64)>>()[..];
+    pub fn trip(&self, trip_request: &TripRequest) -> Result<TripResponse, OsrmError> {
         let result = self
             .instance
-            .trip(coordinates)
+            .trip(trip_request)
             .map_err(|e| OsrmError::Native(NativeOsrmError::FfiError(e)))?;
         serde_json::from_str::<TripResponse>(&result)
             .map_err(|e| OsrmError::Native(NativeOsrmError::JsonParse(Box::new(e))))

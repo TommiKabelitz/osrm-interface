@@ -93,6 +93,7 @@ impl<'a> RouteRequestBuilder<'a> {
         self.continue_straight = val;
         self
     }
+
     pub fn bearings(mut self, bearings: &'a [Option<Bearing>]) -> Self {
         self.bearings = Some(bearings);
         self

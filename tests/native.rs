@@ -106,7 +106,7 @@ fn test_basic_native_trip() {
         .build()
         .expect("Failed to build trip request");
 
-    let trip_response = engine.trip(trip_request).expect("Failed navigate trip");
+    let trip_response = engine.trip(&trip_request).expect("Failed navigate trip");
 
     assert_eq!(trip_response.code, "Ok", "Response code is not 'Ok'");
     assert_eq!(
