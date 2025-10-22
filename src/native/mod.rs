@@ -3,7 +3,7 @@ use crate::r#match::{Approach, MatchGapsBehaviour, MatchRequest};
 use crate::nearest::NearestRequest;
 use crate::request_types::{Bearing, Exclude, GeometryType, OverviewZoom, Snapping};
 use crate::route::RouteRequest;
-use crate::table::{TableAnnotation, TableFallbackCoordinate};
+use crate::table::{TableAnnotation, TableFallbackCoordinate, TableRequest};
 pub use osrm_engine::OsrmEngine;
 
 use std::f64;
@@ -28,17 +28,20 @@ struct OsrmResult {
     message: *mut c_char,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 #[repr(C)]
-struct ArrayString {
+struct ArrayString<'a> {
     len: usize,
     pointer: *const u8,
+    _marker: std::marker::PhantomData<&'a u8>,
 }
-impl From<&str> for ArrayString {
-    fn from(value: &str) -> Self {
+
+impl<'a> From<&'a str> for ArrayString<'a> {
+    fn from(value: &'a str) -> Self {
         Self {
             len: value.len(),
             pointer: value.as_ptr(),
+            _marker: std::marker::PhantomData,
         }
     }
 }
@@ -59,6 +62,18 @@ unsafe extern "C" {
         fallback_speed: f64,
         fallback_coordinate_type: TableFallbackCoordinate,
         scale_factor: f64,
+        bearings: *const Bearing,
+        num_bearings: usize,
+        radiuses: *const f64,
+        num_radiuses: usize,
+        hints: *const ArrayString,
+        num_hints: usize,
+        approaches: *const Approach,
+        num_approaches: usize,
+        generate_hints: bool,
+        excludes: *const ArrayString,
+        num_excludes: usize,
+        snapping: Snapping,
     ) -> OsrmResult;
     fn osrm_trip(
         osrm_instance: *mut c_void,
@@ -73,7 +88,7 @@ unsafe extern "C" {
         geometry_type: GeometryType,
         overview_zoom: OverviewZoom,
         flags: u8,
-        bearings: *const &Bearing,
+        bearings: *const Bearing,
         num_bearings: usize,
         radiuses: *const f64,
         num_radiuses: usize,
@@ -98,7 +113,7 @@ unsafe extern "C" {
         waypoints: *const usize,
         num_waypoints: usize,
         flags: u8,
-        bearings: *const &Bearing,
+        bearings: *const Bearing,
         num_bearings: usize,
         radiuses: *const f64,
         num_radiuses: usize,
@@ -183,11 +198,10 @@ impl Osrm {
             .iter()
             .flat_map(|p| [p.longitude(), p.latitude()])
             .collect();
-        let empty_bearing = Bearing::new(0, 0).unwrap();
         let bearings = if let Some(bearings) = route_request.bearings {
             bearings
                 .iter()
-                .map(|bearing| bearing.as_ref().unwrap_or(&empty_bearing))
+                .map(|bearing| bearing.unwrap_or_default())
                 .collect()
         } else {
             Vec::new()
@@ -299,11 +313,10 @@ impl Osrm {
         let timestamps = match_request.timestamps.unwrap_or(&[]);
         let waypoints = match_request.waypoints.unwrap_or(&[]);
 
-        let empty_bearing = Bearing::new(0, 0).unwrap();
         let bearings = if let Some(bearings) = match_request.bearings {
             bearings
                 .iter()
-                .map(|bearing| bearing.as_ref().unwrap_or(&empty_bearing))
+                .map(|bearing| bearing.unwrap_or_default())
                 .collect()
         } else {
             Vec::new()
@@ -374,37 +387,152 @@ impl Osrm {
         Ok(rust_str)
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub(crate) fn table(
-        &self,
-        coordinates: &[(f64, f64)],
-        sources: Option<&[usize]>,
-        destinations: Option<&[usize]>,
-        annotations: TableAnnotation,
-        fallback_speed: f64,
-        fallback_coordinate_type: TableFallbackCoordinate,
-        scale_factor: f64,
-    ) -> Result<String, String> {
+    pub(crate) fn table(&self, table_request: &TableRequest) -> Result<String, String> {
+        // Not using is_empty because the lengths are actually needed for the index
+        // arrays below
+        let len_sources = table_request.sources.len();
+        let len_destinations = table_request.destinations.len();
+
+        let sources_index: &[usize] = &(0..(len_sources)).collect::<Vec<usize>>()[..];
+        let destination_index: &[usize] =
+            &(len_sources..(len_sources + len_destinations)).collect::<Vec<usize>>()[..];
+        let coordinates: &[(f64, f64)] = &[table_request.sources, table_request.destinations]
+            .concat()
+            .iter()
+            .map(|s| (s.longitude(), s.latitude()))
+            .collect::<Vec<(f64, f64)>>()[..];
+
         let flat_coords: Vec<f64> = coordinates
             .iter()
             .flat_map(|&(lon, lat)| vec![lon, lat])
             .collect();
-        let sources_vec = sources.unwrap_or(&[]).to_vec();
-        let dests_vec = destinations.unwrap_or(&[]).to_vec();
+
+        let bearings = if table_request.source_bearings.is_some()
+            | table_request.destination_bearings.is_some()
+        {
+            let mut bearings = vec![Bearing::default(); len_sources + len_destinations];
+            if let Some(source_bearings) = table_request.source_bearings {
+                for (i, b) in source_bearings.iter().enumerate() {
+                    if let Some(b) = b {
+                        bearings[i] = *b;
+                    }
+                }
+            }
+            if let Some(destination_bearings) = table_request.destination_bearings {
+                for (i, b) in destination_bearings.iter().enumerate() {
+                    if let Some(b) = b {
+                        bearings[len_sources + i] = *b;
+                    }
+                }
+            }
+            bearings
+        } else {
+            Vec::new()
+        };
+
+        let radiuses = if table_request.source_radiuses.is_some()
+            | table_request.destination_radiuses.is_some()
+        {
+            let mut radiuses = vec![0.0; len_sources + len_destinations];
+            if let Some(source_radiuses) = table_request.source_radiuses {
+                for (i, r) in source_radiuses.iter().enumerate() {
+                    if let Some(r) = r {
+                        radiuses[i] = *r;
+                    }
+                }
+            }
+            if let Some(destination_radiuses) = table_request.destination_radiuses {
+                for (i, r) in destination_radiuses.iter().enumerate() {
+                    if let Some(r) = r {
+                        radiuses[len_sources + i] = *r;
+                    }
+                }
+            }
+            radiuses
+        } else {
+            Vec::new()
+        };
+
+        let hints =
+            if table_request.source_hints.is_some() | table_request.destination_hints.is_some() {
+                let mut hints = vec![ArrayString::from(""); len_sources + len_destinations];
+                if let Some(source_hints) = table_request.source_hints {
+                    for (i, h) in source_hints.iter().enumerate() {
+                        if let Some(h) = h {
+                            hints[i] = ArrayString::from(*h);
+                        }
+                    }
+                }
+                if let Some(destination_hints) = table_request.destination_hints {
+                    for (i, h) in destination_hints.iter().enumerate() {
+                        if let Some(h) = h {
+                            hints[len_sources + i] = ArrayString::from(*h);
+                        }
+                    }
+                }
+                hints
+            } else {
+                Vec::new()
+            };
+
+        let approaches = if table_request.source_approaches.is_some()
+            | table_request.destination_approaches.is_some()
+        {
+            let mut approaches = vec![Approach::Unrestricted; len_sources + len_destinations];
+            if let Some(source_approaches) = table_request.source_approaches {
+                for (i, a) in source_approaches.iter().enumerate() {
+                    approaches[i] = *a
+                }
+            }
+            if let Some(destination_approaches) = table_request.destination_approaches {
+                for (i, a) in destination_approaches.iter().enumerate() {
+                    approaches[len_sources + i] = *a;
+                }
+            }
+            approaches
+        } else {
+            Vec::new()
+        };
+
+        let excludes = match table_request.exclude {
+            Some(excludes) => excludes
+                .iter()
+                .map(|exclude| match exclude {
+                    Exclude::Bicycle(v) => v.as_str().into(),
+                    Exclude::Car(v) => v.as_str().into(),
+                })
+                .collect(),
+            None => Vec::new(),
+        };
+        let snapping = table_request.snapping.unwrap_or(Snapping::Default);
 
         let result = unsafe {
             osrm_table(
                 self.instance,
                 flat_coords.as_ptr(),
                 coordinates.len(),
-                sources_vec.as_ptr(),
-                sources_vec.len(),
-                dests_vec.as_ptr(),
-                dests_vec.len(),
-                annotations,
-                fallback_speed,
-                fallback_coordinate_type,
-                scale_factor,
+                sources_index.as_ptr(),
+                sources_index.len(),
+                destination_index.as_ptr(),
+                destination_index.len(),
+                table_request.annotations,
+                table_request.fallback_speed.unwrap_or(0.0),
+                table_request
+                    .fallback_coordinate
+                    .unwrap_or(TableFallbackCoordinate::Input),
+                table_request.scale_factor.unwrap_or(0.0),
+                bearings.as_ptr(),
+                bearings.len(),
+                radiuses.as_ptr(),
+                radiuses.len(),
+                hints.as_ptr(),
+                hints.len(),
+                approaches.as_ptr(),
+                approaches.len(),
+                table_request.generate_hints,
+                excludes.as_ptr(),
+                excludes.len(),
+                snapping,
             )
         };
 

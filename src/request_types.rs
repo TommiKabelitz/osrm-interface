@@ -83,6 +83,15 @@ impl Bearing {
     }
 }
 
+impl Default for Bearing {
+    fn default() -> Self {
+        Bearing {
+            bearing: 0,
+            range: 180,
+        }
+    }
+}
+
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[derive(Clone, Copy)]
 pub enum Exclude {

@@ -274,7 +274,7 @@ fn test_native_table() {
         .build()
         .expect("Failed to create table request");
     let response = engine
-        .table(table_request)
+        .table(&table_request)
         .expect("Failed to determine table");
 
     assert_eq!(response.code, "Ok", "Response code is not 'Ok'");
@@ -307,7 +307,7 @@ fn test_table_options() {
         .build()
         .expect("Failed to create table request");
     let response = engine
-        .table(table_request)
+        .table(&table_request)
         .expect("Failed to determine table");
 
     assert_eq!(response.code, "Ok", "Response code is not 'Ok'");

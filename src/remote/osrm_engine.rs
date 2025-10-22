@@ -39,9 +39,10 @@ impl OsrmEngine {
             .join(";");
 
         let mut url = format!(
-            "{}/table/v1/{}/{coordinates}?sources={source_indices}&destinations={destination_indices}",
+            "{}/table/v1/{}/{coordinates}?sources={source_indices}&destinations={destination_indices}&generate_hints={}",
             self.endpoint,
             self.profile.url_form(),
+            table_request.generate_hints
         );
 
         match (
@@ -68,6 +69,189 @@ impl OsrmEngine {
             (None, annotations) => {
                 url.push_str(&format!("&annotations={}", annotations.url_form()))
             }
+        }
+
+        // I know this is repetitive, but I don't really care. Defining a
+        // generic function feels like overkill and I can't be bothered with
+        // a closure either
+        let mut bearing_string = String::new();
+        let mut first = true;
+        if let Some(source_bearings) = table_request.source_bearings {
+            for b in source_bearings {
+                if !first {
+                    bearing_string.push(';');
+                }
+                if let Some(b) = b {
+                    bearing_string.push_str(&b.url_form());
+                }
+                first = false;
+            }
+        } else {
+            for _ in 0..len_sources {
+                if !first {
+                    bearing_string.push(';');
+                }
+                first = false;
+            }
+        }
+        if let Some(destination_bearings) = table_request.destination_bearings {
+            for b in destination_bearings {
+                if !first {
+                    bearing_string.push(';');
+                }
+                if let Some(b) = b {
+                    bearing_string.push_str(&b.url_form());
+                }
+                first = false;
+            }
+        } else {
+            for _ in 0..len_destinations {
+                if !first {
+                    bearing_string.push(';');
+                }
+                first = false;
+            }
+        }
+        if table_request.source_bearings.is_some() || table_request.destination_bearings.is_some() {
+            url.push_str(&format!("&bearings={}", bearing_string));
+        }
+
+        let mut first = true;
+        let mut radius_string = String::new();
+        if let Some(source_radiuses) = table_request.source_radiuses {
+            for r in source_radiuses {
+                if !first {
+                    radius_string.push(';');
+                }
+                if let Some(r) = r {
+                    radius_string.push_str(&format!("{r:.12}"));
+                }
+                first = false;
+            }
+        } else {
+            for _ in 0..len_sources {
+                if !first {
+                    radius_string.push(';');
+                }
+                first = false;
+            }
+        }
+        if let Some(destination_radiuses) = table_request.destination_radiuses {
+            for r in destination_radiuses {
+                if !first {
+                    radius_string.push(';');
+                }
+                if let Some(r) = r {
+                    radius_string.push_str(&format!("{r:.12}"));
+                }
+                first = false;
+            }
+        } else {
+            for _ in 0..len_destinations {
+                if !first {
+                    radius_string.push(';');
+                }
+                first = false;
+            }
+        }
+        if table_request.source_radiuses.is_some() || table_request.destination_radiuses.is_some() {
+            url.push_str(&format!("&radiuses={}", radius_string));
+        }
+
+        let mut first = true;
+        let mut hints_string = String::new();
+        if let Some(source_hints) = table_request.source_hints {
+            for h in source_hints {
+                if !first {
+                    hints_string.push(';');
+                }
+                if let Some(h) = h {
+                    hints_string.push_str(h);
+                }
+                first = false;
+            }
+        } else {
+            for _ in 0..len_sources {
+                if !first {
+                    hints_string.push(';');
+                }
+                first = false;
+            }
+        }
+        if let Some(destination_hints) = table_request.destination_hints {
+            for h in destination_hints {
+                if !first {
+                    hints_string.push(';');
+                }
+                if let Some(h) = h {
+                    hints_string.push_str(h);
+                }
+                first = false;
+            }
+        } else {
+            for _ in 0..len_destinations {
+                if !first {
+                    hints_string.push(';');
+                }
+                first = false;
+            }
+        }
+        if table_request.source_hints.is_some() || table_request.destination_hints.is_some() {
+            url.push_str(&format!("&hints={}", hints_string));
+        }
+
+        let mut first = true;
+        let mut approaches_string = String::new();
+        if let Some(source_approaches) = table_request.source_approaches {
+            for a in source_approaches {
+                if !first {
+                    approaches_string.push(';');
+                }
+                approaches_string.push_str(a.url_form());
+                first = false;
+            }
+        } else {
+            for _ in 0..len_sources {
+                if !first {
+                    approaches_string.push(';');
+                }
+                first = false;
+            }
+        }
+        if let Some(destination_approaches) = table_request.destination_approaches {
+            for a in destination_approaches {
+                if !first {
+                    approaches_string.push(';');
+                }
+                approaches_string.push_str(a.url_form());
+                first = false;
+            }
+        } else {
+            for _ in 0..len_destinations {
+                if !first {
+                    approaches_string.push(';');
+                }
+                first = false;
+            }
+        }
+        if table_request.source_approaches.is_some()
+            || table_request.destination_approaches.is_some()
+        {
+            url.push_str(&format!("&approaches={}", approaches_string));
+        }
+
+        if let Some(exclude) = table_request.exclude {
+            let exclude = exclude
+                .iter()
+                .map(|exclude| match &exclude {
+                    Exclude::Bicycle(v) => v.as_str(),
+                    Exclude::Car(v) => v.as_str(),
+                })
+                .join(",");
+            url.push_str(&format!("&exclude={}", exclude));
+        }
+        if let Some(snapping) = table_request.snapping {
+            url.push_str(&format!("&snapping={}", snapping.url_form()));
         }
         let response = ureq::get(url)
             .call()

@@ -130,7 +130,19 @@ extern "C"
                            enum AnnotationsType annotations,
                            double fallback_speed,
                            enum FallbackCoordinateType fallback_coordinate_type,
-                           double scale_factor)
+                           double scale_factor,
+                           const osrm::engine::Bearing *bearings,
+                           size_t num_bearings,
+                           const double *radiuses,
+                           size_t num_radiuses,
+                           const ArrayString *hints,
+                           size_t num_hints,
+                           const osrm::engine::Approach *approaches,
+                           size_t num_approaches,
+                           bool generate_hints,
+                           const ArrayString *excludes,
+                           const size_t num_excludes,
+                           enum Snapping snapping)
     {
 
         if (!osrm_instance)
@@ -159,8 +171,10 @@ extern "C"
         {
             params.destinations.assign(destinations, destinations + num_destinations);
         }
-
         params.annotations = static_cast<osrm::engine::api::TableParameters::AnnotationsType>(annotations);
+        params.generate_hints = generate_hints;
+        params.snapping = static_cast<osrm::engine::api::BaseParameters::SnappingType>(snapping);
+
         if (fallback_speed > 0)
         {
             params.fallback_coordinate_type = static_cast<osrm::engine::api::TableParameters::FallbackCoordinateType>(fallback_coordinate_type);
@@ -169,6 +183,104 @@ extern "C"
         if (scale_factor > 0)
         {
             params.scale_factor = scale_factor;
+        }
+        if (num_bearings > 0)
+        {
+            if (num_bearings != num_coordinates)
+            {
+                const char *err = "num_bearings must equal num_coordinates";
+                char *msg = new char[strlen(err) + 1];
+                strcpy(msg, err);
+                return {1, msg};
+            }
+            params.bearings.reserve(num_bearings);
+            for (size_t i = 0; i < num_bearings; i++)
+            {
+                params.bearings.push_back(bearings[i]);
+            }
+        }
+
+        if (num_radiuses > 0)
+        {
+            if (num_radiuses != num_coordinates)
+            {
+                const char *err = "num_radiuses must equal num_coordinates";
+                char *msg = new char[strlen(err) + 1];
+                strcpy(msg, err);
+                return {1, msg};
+            }
+            params.radiuses.reserve(num_radiuses);
+            for (size_t i = 0; i < num_radiuses; i++)
+            {
+                if (std::isinf(radiuses[i]))
+                {
+                    params.radiuses.push_back(std::nullopt);
+                }
+                else
+                {
+                    params.radiuses.push_back(radiuses[i]);
+                }
+            }
+        }
+        if (num_hints > 0)
+        {
+            if (num_hints != num_coordinates)
+            {
+                const char *err = "num_hints must equal num_coordinates";
+                char *msg = new char[strlen(err) + 1];
+                strcpy(msg, err);
+                return {1, msg};
+            }
+            params.radiuses.reserve(num_hints);
+            for (size_t i = 0; i < num_hints; i++)
+            {
+                const ArrayString &h = hints[i];
+
+                if (h.pointer == nullptr || h.len == 0)
+                {
+                    params.hints.emplace_back();
+                    continue;
+                }
+
+                std::string encoded_hint(reinterpret_cast<const char *>(h.pointer), h.len);
+
+                osrm::engine::Hint hint;
+                hint.FromBase64(encoded_hint);
+                params.hints.push_back(std::move(hint));
+            }
+        }
+        if (num_approaches > 0)
+        {
+            if (num_approaches != num_coordinates)
+            {
+                const char *err = "num_approaches must equal num_coordinates";
+                char *msg = new char[strlen(err) + 1];
+                strcpy(msg, err);
+                return {1, msg};
+            }
+            params.approaches.reserve(num_approaches);
+            for (size_t i = 0; i < num_approaches; i++)
+            {
+                params.approaches.push_back(approaches[i]);
+            }
+        }
+        if (num_excludes > 0)
+        {
+            params.exclude.reserve(num_excludes);
+            for (size_t i = 0; i < num_excludes; i++)
+            {
+                const ArrayString &e = excludes[i];
+
+                if (e.pointer == nullptr || e.len == 0)
+                {
+                    continue;
+                }
+
+                std::string exclude_str(reinterpret_cast<const char *>(e.pointer), e.len);
+
+                osrm::engine::Hint hint;
+                params.exclude.push_back(std::move(exclude_str));
+            }
         }
 
         osrm::json::Object result;
@@ -209,7 +321,7 @@ extern "C"
                            enum GeometryType geometry_type,
                            enum OverviewZoom overview_zoom,
                            uint8_t flags,
-                           const osrm::engine::Bearing **bearings,
+                           const osrm::engine::Bearing *bearings,
                            size_t num_bearings,
                            const double *radiuses,
                            size_t num_radiuses,
@@ -259,7 +371,7 @@ extern "C"
             params.bearings.reserve(num_bearings);
             for (size_t i = 0; i < num_bearings; i++)
             {
-                params.bearings.push_back(*bearings[i]);
+                params.bearings.push_back(bearings[i]);
             }
         }
 
@@ -394,7 +506,7 @@ extern "C"
                            const size_t *waypoints,
                            size_t num_waypoints,
                            uint8_t flags,
-                           const osrm::engine::Bearing **bearings,
+                           const osrm::engine::Bearing *bearings,
                            size_t num_bearings,
                            const double *radiuses,
                            size_t num_radiuses,
@@ -464,7 +576,7 @@ extern "C"
             params.bearings.reserve(num_bearings);
             for (size_t i = 0; i < num_bearings; i++)
             {
-                params.bearings.push_back(*bearings[i]);
+                params.bearings.push_back(bearings[i]);
             }
         }
 

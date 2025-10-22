@@ -5,7 +5,7 @@ use crate::native::Osrm;
 use crate::nearest::{NearestRequest, NearestResponse};
 use crate::point::Point;
 use crate::route::{RouteRequest, RouteRequestBuilder, RouteResponse, SimpleRouteResponse};
-use crate::table::{TableAnnotation, TableFallbackCoordinate, TableRequest, TableResponse};
+use crate::table::{TableRequest, TableResponse};
 use crate::trip::{TripRequest, TripResponse};
 
 pub struct OsrmEngine {
@@ -19,54 +19,10 @@ impl OsrmEngine {
         Ok(OsrmEngine { instance: osrm })
     }
 
-    pub fn table(&self, table_request: TableRequest) -> Result<TableResponse, OsrmError> {
-        // Not using is_empty because the lengths are actually needed for the index
-        // arrays below
-        let len_sources = table_request.sources.len();
-        let len_destinations = table_request.destinations.len();
-        if len_sources == 0 || len_destinations == 0 {
-            return Err(OsrmError::InvalidTableRequest);
-        }
-        let sources_index: &[usize] = &(0..(len_sources)).collect::<Vec<usize>>()[..];
-        let destination_index: &[usize] =
-            &(len_sources..(len_sources + len_destinations)).collect::<Vec<usize>>()[..];
-        let coordinates: &[(f64, f64)] = &[table_request.sources, table_request.destinations]
-            .concat()
-            .iter()
-            .map(|s| (s.longitude(), s.latitude()))
-            .collect::<Vec<(f64, f64)>>()[..];
-
-        // For consistency with osrm, want to ensure we mimic the backend's behaviour
-        // when speed should not be specified and the same for the scale factor. Hence,
-        // we set them to zero which tells the wrapper to not set the values and use
-        // osrm's built in defaults
-        let (fallback_coordinate_type, fallback_speed) = match (
-            table_request.fallback_coordinate,
-            table_request.fallback_speed,
-        ) {
-            (Some(coord), Some(speed)) => (coord, speed),
-            (None, None) => (TableFallbackCoordinate::Input, 0.0),
-            _ => return Err(OsrmError::InvalidTableRequest),
-        };
-        let scale_factor = match (table_request.scale_factor, table_request.annotations) {
-            (Some(scale), TableAnnotation::All | TableAnnotation::Duration) => scale,
-            (Some(_), TableAnnotation::None | TableAnnotation::Distance) => {
-                return Err(OsrmError::InvalidTableRequest);
-            }
-            (None, _) => 0.0,
-        };
-
+    pub fn table(&self, table_request: &TableRequest) -> Result<TableResponse, OsrmError> {
         let result = self
             .instance
-            .table(
-                coordinates,
-                Some(sources_index),
-                Some(destination_index),
-                table_request.annotations,
-                fallback_speed,
-                fallback_coordinate_type,
-                scale_factor,
-            )
+            .table(table_request)
             .map_err(|e| OsrmError::Native(NativeOsrmError::FfiError(e)))?;
         serde_json::from_str::<TableResponse>(&result)
             .map_err(|e| OsrmError::Native(NativeOsrmError::JsonParse(Box::new(e))))
