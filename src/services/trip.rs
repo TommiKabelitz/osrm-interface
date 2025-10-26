@@ -166,7 +166,11 @@ impl<'a> TripRequestBuilder<'a> {
                     DimensionMismatch::Radiuses,
                 ));
             }
+            if !radiuses.iter().all(|r| r.is_none_or(|v| v >= 0.0)) {
+                return Err(TripRequestError::NegativeRadius);
+            }
         }
+
         #[allow(clippy::collapsible_if)]
         if let Some(hints) = self.hints {
             if hints.len() != self.points.len() {
@@ -225,6 +229,8 @@ pub enum TripRequestError {
     DimensionMismatch(DimensionMismatch),
     #[error("Exclude types are not all of the same type")]
     DifferentExcludeTypes,
+    #[error("Radii must be non-negative")]
+    NegativeRadius,
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]

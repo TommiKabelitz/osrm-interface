@@ -81,6 +81,13 @@ impl<'a> NearestRequestBuilder<'a> {
             }
         }
 
+        #[allow(clippy::collapsible_if)]
+        if let Some(r) = self.radius {
+            if r < 0.0 {
+                return Err(NearestRequestError::NegativeRadius);
+            }
+        }
+
         Ok(NearestRequest {
             point: self.point,
             number: self.number,
@@ -92,10 +99,13 @@ impl<'a> NearestRequestBuilder<'a> {
         })
     }
 }
+
 #[derive(Error, Debug)]
 pub enum NearestRequestError {
     #[error("Exclude types are not all of the same type")]
     DifferentExcludeTypes,
+    #[error("Radius must be non-negative")]
+    NegativeRadius,
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]

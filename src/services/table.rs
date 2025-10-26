@@ -224,6 +224,9 @@ impl<'a> TableRequestBuilder<'a> {
                     DimensionMismatch::Radiuses,
                 ));
             }
+            if !radiuses.iter().all(|r| r.is_none_or(|v| v >= 0.0)) {
+                return Err(TableRequestError::NegativeRadius);
+            }
         }
 
         #[allow(clippy::collapsible_if)]
@@ -232,6 +235,9 @@ impl<'a> TableRequestBuilder<'a> {
                 return Err(TableRequestError::DimensionMismatch(
                     DimensionMismatch::Radiuses,
                 ));
+            }
+            if !radiuses.iter().all(|r| r.is_none_or(|v| v >= 0.0)) {
+                return Err(TableRequestError::NegativeRadius);
             }
         }
 
@@ -327,6 +333,8 @@ pub enum TableRequestError {
     DimensionMismatch(DimensionMismatch),
     #[error("Exclude types are not all of the same type")]
     DifferentExcludeTypes,
+    #[error("Radii must be non-negative")]
+    NegativeRadius,
 }
 
 #[derive(Clone, Copy)]

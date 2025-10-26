@@ -364,7 +364,11 @@ impl<'a> MatchRequestBuilder<'a> {
                     DimensionMismatch::Radiuses,
                 ));
             }
+            if !radiuses.iter().all(|r| r.is_none_or(|v| v >= 0.0)) {
+                return Err(MatchRequestError::NegativeRadius);
+            }
         }
+
         #[allow(clippy::collapsible_if)]
         if let Some(hints) = self.hints {
             if hints.len() != self.points.len() {
@@ -433,6 +437,8 @@ pub enum MatchRequestError {
     WaypointIndexOutOfBounds(usize, usize),
     #[error("Exclude types are not all of the same type")]
     DifferentExcludeTypes,
+    #[error("Radii must be non-negative")]
+    NegativeRadius,
 }
 
 #[derive(Debug)]
