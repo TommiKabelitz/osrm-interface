@@ -5,11 +5,8 @@ pub mod dotenv;
 pub fn init_native_engine(dotenv_path: &str) -> osrm_interface::native::OsrmEngine {
     let osrm_map_file = dotenv::load_dotenv_value(dotenv_path, "OSRM_MAP_FILE")
         .expect("Failed to load .env which needs to set OSRM_MAP_FILE for native tests");
-    osrm_interface::native::OsrmEngine::new(
-        &osrm_map_file,
-        osrm_interface::algorithm::Algorithm::MLD,
-    )
-    .expect("Failed to init native OSRM engine")
+    osrm_interface::native::OsrmEngine::new(&osrm_map_file, osrm_interface::Algorithm::MLD)
+        .expect("Failed to init native OSRM engine")
 }
 
 #[cfg(feature = "remote")]

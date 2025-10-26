@@ -35,3 +35,10 @@ rand = "0.9.2"
 
 [profile.release]
 lto = false
+
+# docs.rs-specific configuration
+[package.metadata.docs.rs]
+# document all features
+all-features = true
+# defines the configuration attribute `docsrs`
+rustdoc-args = ["--cfg", "docsrs"]

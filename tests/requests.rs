@@ -1,4 +1,4 @@
-use osrm_interface::{point::Point, route::RouteRequestBuilder};
+use osrm_interface::{Point, route::RouteRequestBuilder};
 
 #[test]
 fn test_invalid_point() {

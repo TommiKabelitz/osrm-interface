@@ -1,3 +1,39 @@
+//! The native version of the OSRM engine. Locked behind the `native`
+//! feature flag. Calls directly into a linked version of osrm-backend
+//! through a minimal cpp wrapper.
+//!
+//! ## Compilation
+//!
+//! Using this requires that osrm-backend is built on the system already.
+//! Building and installing osrm-backend is likely to result in sufficient
+//! headers being placed in the appropriate locations.
+//!
+//! For more details about compiling the backend, see the
+//! [osrm documentation](<https://github.com/Project-OSRM/osrm-backend>).
+//!
+//! For compiling this crate, there are a couple of environment variables
+//! you can leverage. The build.rs assumes that osrm-backend has been installed
+//! to /usr/local/. If it is installed elsewhere, set `OSRM_BACKEND_PATH` to
+//! the directory containing the backend (parent directory to the build dir).
+//!
+//! `OSRM_DEBUG_PATH` is also available which allows a different version of osrm
+//! to be used for debug builds for things like debug symbols for stepping through
+//! osrm itself in the debugger if you actually need it.
+//!
+//! Having said that, if you are having trouble, it may be easier to simply vendor
+//! this crate into repo directly and then modifying the build.rs to point where
+//! you need it to.
+//!
+//! ## Map data
+//!
+//! When initialising the engine, you will need to supply a path to the map data.
+//! The map data is extracted using tools provided by the backend which are not
+//! wrapped in this crate. See the
+//! [osrm documentation](<https://github.com/Project-OSRM/osrm-backend>) for more
+//! information about extracting the map data. The extraction process defines the
+//! Algorithm that should be passed to `native::OsrmEngine::new()`.
+//!
+
 mod osrm_engine;
 use crate::r#match::{Approach, MatchGapsBehaviour, MatchRequest};
 use crate::nearest::NearestRequest;
@@ -5,6 +41,7 @@ use crate::request_types::{Bearing, Exclude, GeometryType, OverviewZoom, Snappin
 use crate::route::RouteRequest;
 use crate::table::{TableAnnotation, TableFallbackCoordinate, TableRequest};
 use crate::trip::{TripDestination, TripRequest, TripSource};
+#[cfg_attr(doc, doc(cfg(feature = "native")))]
 pub use osrm_engine::OsrmEngine;
 
 use std::f64;

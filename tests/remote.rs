@@ -4,10 +4,10 @@ mod common;
 use common::init_remote_engine;
 
 use osrm_interface::{
+    Point,
     r#match::MatchRequestBuilder,
     nearest::NearestRequestBuilder,
     osrm_response_types::Geometry,
-    point::Point,
     request_types::{CarExclude, Exclude, GeometryType, OverviewZoom},
     route::RouteRequestBuilder,
     table::TableRequestBuilder,

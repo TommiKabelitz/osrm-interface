@@ -1,24 +1,47 @@
 use itertools::Itertools;
 
+use crate::Point;
 use crate::errors::{OsrmError, RemoteOsrmError};
 use crate::r#match::{MatchRequest, MatchResponse};
 use crate::nearest::{NearestRequest, NearestResponse};
-use crate::point::Point;
 use crate::request_types::{Exclude, Profile};
 use crate::route::{RouteRequest, RouteRequestBuilder, RouteResponse, SimpleRouteResponse};
 use crate::table::{TableAnnotation, TableRequest, TableResponse};
 use crate::trip::{TripRequest, TripResponse};
 
+/// The engine for calling into osrm-backend through the HTTP web API.
+#[cfg_attr(doc, doc(cfg(feature = "remote")))]
 pub struct OsrmEngine {
     endpoint: String,
     pub profile: Profile,
 }
 
 impl OsrmEngine {
+    /// Initialise the remote engine.
+    ///
+    /// `profile` is a required argument because it is used by Project OSRM
+    /// when you route to their official hosted version of the HTTP web API in
+    /// the url path to route using the proper profile. When running `osrm-routed`
+    /// manually, the profile is still required in the url, but is ignored by
+    /// osrm-routed. The profile used is simply that of the map data that `osrm-routed`
+    /// is using.
+    ///
+    /// See the module level documentation for more information about profiles.
     pub fn new(endpoint: String, profile: Profile) -> Self {
         Self { endpoint, profile }
     }
 
+    /// Given a set of source and destination `Point`s or `Hint`s, determine the distances
+    /// and/or durations to travel between all sources and destinations.
+    ///
+    /// See `TableRequest` for all possible options.
+    ///
+    /// ## Official documentation
+    ///
+    /// Computes the duration of the fastest route between all pairs of supplied coordinates.
+    /// Returns durations or distances or both between the coordinate pairs. Note that the
+    /// distances are not the shortest distance between two coordinates, but rather the
+    /// distances of the fastest routes. Durations are in seconds and distances are in meters.
     pub fn table(&self, table_request: TableRequest) -> Result<TableResponse, OsrmError> {
         let len_sources = table_request.sources.len();
         let len_destinations = table_request.destinations.len();
@@ -263,6 +286,14 @@ impl OsrmEngine {
             .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))
     }
 
+    /// Given an ordered set of `Point`s or `Hint`s, route through those points in the
+    /// given order.
+    ///
+    /// See `RouteRequest` for all possible options.
+    ///
+    /// ## Official documentation
+    ///
+    /// Finds the fastest route between coordinates in the supplied order.
     pub fn route(&self, route_request: &RouteRequest) -> Result<RouteResponse, OsrmError> {
         let len = route_request.points.len();
         if len == 0 {
@@ -349,6 +380,20 @@ impl OsrmEngine {
             .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))
     }
 
+    /// Given an _unordered_ set of `Point`s or `Hint`s, uses a greedy heuristic to
+    /// approximately solve the travelling salesman problem. Returns the fastest route
+    /// through those points in some order.
+    ///
+    /// See `TripRequest` for all possible options.
+    ///
+    /// ## Official documentation
+    ///
+    /// The trip plugin solves the Traveling Salesman Problem using a greedy
+    /// heuristic (farthest-insertion algorithm) for 10 or more waypoints and
+    /// uses brute force for less than 10 waypoints. The returned path does
+    /// not have to be the fastest one. As TSP is NP-hard it only returns an
+    /// approximation. Note that all input coordinates have to be connected
+    /// for the trip service to work.
     pub fn trip(&self, trip_request: &TripRequest) -> Result<TripResponse, OsrmError> {
         let len = trip_request.points.len();
         if len == 0 {
@@ -439,6 +484,9 @@ impl OsrmEngine {
             .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))
     }
 
+    /// A massively simplified interface for routing just between two points.
+    ///
+    /// Calls OsrmEngine::route with default options.
     pub fn simple_route(&self, from: Point, to: Point) -> Result<SimpleRouteResponse, OsrmError> {
         let points = [from, to];
         let full_request = RouteRequestBuilder::new(&points)
@@ -467,6 +515,17 @@ impl OsrmEngine {
         })
     }
 
+    /// Snap the given `Point` to the n closest nodes on the map. Returning the snapped
+    /// coordinates and various metrics.
+    ///
+    /// `Hint`s returned from `nearest` may be passed to other services, allowing
+    /// the call to skip the snapping process on subsequent calls.
+    ///
+    /// See `NearestRequest` for all possible options.
+    ///
+    /// ## Official documentation
+    ///
+    /// Snaps a coordinate to the street network and returns the nearest n matches.
     pub fn nearest(&self, nearest_request: &NearestRequest) -> Result<NearestResponse, OsrmError> {
         let mut url = format!(
             "{}/nearest/v1/{}/{:.6},{:.6}?number={}",
@@ -509,6 +568,20 @@ impl OsrmEngine {
             .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))
     }
 
+    /// Given an ordered set of `Point`s or `Hint`s (and optionally
+    /// timestamps), determine the likely route taken that could match
+    /// those coordinates. Returns the route and confidence values.
+    ///
+    /// See `MatchRequest` for all possible options.
+    ///
+    /// ## Official documentation
+    ///
+    /// Map matching matches/snaps given GPS points to the road network
+    /// in the most plausible way. Please note the request might result
+    /// in multiple sub-traces. Large jumps in the timestamps (> 60s) or
+    /// improbable transitions lead to trace splits if a complete matching
+    /// could not be found. The algorithm might not be able to match all
+    /// points. Outliers are removed if they can not be matched successfully.
     pub fn r#match(&self, match_request: &MatchRequest) -> Result<MatchResponse, OsrmError> {
         if match_request.points.is_empty() {
             return Err(OsrmError::InvalidMatchRequest);

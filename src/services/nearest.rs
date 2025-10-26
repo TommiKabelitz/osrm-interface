@@ -1,9 +1,12 @@
+//! Snap a (latitude, longitude) coordinate to the nearest node
+//! on the map.
+
 use thiserror::Error;
 
 use crate::{
+    Point,
     r#match::Approach,
     osrm_response_types::Waypoint,
-    point::Point,
     request_types::{Bearing, Exclude, Snapping},
 };
 

@@ -1,3 +1,5 @@
+//! Common request sub-types that are used to build the service requests
+
 #[derive(Clone, Copy)]
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[repr(C)]

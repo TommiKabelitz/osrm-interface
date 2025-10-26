@@ -1,9 +1,12 @@
+//! Given a set of coordinates, construct a route through those coordinates
+//! in the supplied order.
+
 use thiserror::Error;
 
 use crate::r#match::{Approach, DimensionMismatch};
 use crate::osrm_response_types::{Route, Waypoint};
 use crate::request_types::{Bearing, Exclude, OverviewZoom, Snapping};
-use crate::{point::Point, request_types::GeometryType};
+use crate::{Point, request_types::GeometryType};
 
 #[derive(Clone)]
 #[cfg_attr(feature = "debug", derive(Debug))]
@@ -25,8 +28,92 @@ pub struct RouteRequest<'a> {
     pub(crate) skip_waypoints: bool,
 }
 
+/// Helper struct for building a [`RouteRequest`].
+///
+/// Set route options using the struct methods before calling
+/// [`build`](Self::build). The `build` method validates the configuration
+/// and attempts to detect invalid combinations before the request is sent
+/// to the service.
+///
+/// ## Options
+///
+/// - **`points`** (*required*) — A slice of [`Point`]s that define the route path.  
+///   Must contain at least two points.
+///
+/// - **`alternatives`** (*default:* `false`) — If `true`, OSRM will return
+///   alternative routes in addition to the recommended one.
+///
+/// - **`steps`** (*default:* `false`) — If `true`, includes turn-by-turn navigation
+///   instructions for each route leg.
+///
+/// - **`geometry`** (*default:* `GeometryType::Polyline`) — Specifies the encoding
+///   format for returned route geometries. See [`GeometryType`] for options.
+///
+/// - **`overview`** (*default:* `OverviewZoom::Simplified`) — Controls the
+///   generalization level of the route overview geometry. See [`OverviewZoom`].
+///
+/// - **`annotations`** (*default:* `false`) — When enabled, includes metadata such as
+///   distance, duration, and speed for each segment of the route.
+///
+/// - **`continue_straight`** (*default:* `true`) — If `true`, the route will continue
+///   straight at waypoints where possible. If `false`, U-turns may be allowed
+///   when starting new route legs.
+///
+/// - **`exclude`** (*optional*) — A slice of [`Exclude`] values, all of the same
+///   transport mode (e.g., all `Exclude::Car` or all `Exclude::Bicycle`),
+///   specifying road classes to exclude from the route.
+///
+/// - **`snapping`** (*optional*) — Defines how input coordinates are snapped to
+///   the road network. See [`Snapping`] for available modes.
+///
+/// - **`skip_waypoints`** (*default:* `false`) — When `true`, OSRM omits waypoint
+///   information from the response, reducing payload size.
+///
+/// - **`generate_hints`** (*default:* `true`) — When enabled, OSRM returns
+///   location hints to accelerate subsequent queries.
+///
+/// ## Array options
+///
+/// The following options require array slices as input.
+/// Each array must have the same length as `points`.
+/// Some options use [`Option`] to allow per-point overrides.
+///
+/// - **`bearings`** (*optional*) — A slice of optional [`Bearing`]s, one per point.
+///   Each defines an allowed direction in which the point may be snapped to a node.
+///   None => Any direction.
+///
+/// - **`radiuses`** (*optional*) — A slice of optional radiuses (in meters),
+///   constraining how far OSRM may search from each coordinate. None => infinite.
+///
+/// - **`hints`** (*optional*) — A slice of optional pre-computed location hints,
+///   one per point, to accelerate lookups for known coordinates. Unspecified hints
+///   will be snapped.
+///
+/// - **`approaches`** (*optional*) — A slice of [`Approach`] values specifying
+///   the side of the road (e.g., `Approach::Curb`, `Approach::Unrestricted`)
+///   to approach each waypoint from. `Approach::Unrestricted` is the default behaviour.
+///
+/// ## Example
+///
+/// ```
+/// use osrm_interface::route::{RouteRequestBuilder, OverviewZoom};
+///
+/// let points = [
+///     Point::new(48.040437, 10.316550).expect("Invalid point"),
+///     Point::new(49.006101, 9.052887).expect("Invalid point"),
+///     Point::new(48.942296, 10.510960).expect("Invalid point"),
+/// ];
+///
+/// let route_request = RouteRequestBuilder::new(&points)
+///     .steps(true)
+///     .alternatives(true)
+///     .overview(OverviewZoom::Full)
+///     .annotations(true)
+///     .build()
+///     .expect("Failed to build RouteRequest");
+/// ```
 pub struct RouteRequestBuilder<'a> {
-    pub points: &'a [Point],
+    points: &'a [Point],
     alternatives: bool,
     steps: bool,
     geometry: GeometryType,
@@ -44,6 +131,9 @@ pub struct RouteRequestBuilder<'a> {
 }
 
 impl<'a> RouteRequestBuilder<'a> {
+    /// Creates a new [`RouteRequestBuilder`] with default parameters.
+    ///
+    /// The builder can then be customized using its setter methods.
     pub fn new(points: &'a [Point]) -> Self {
         Self {
             points,
@@ -64,79 +154,114 @@ impl<'a> RouteRequestBuilder<'a> {
         }
     }
 
+    /// Sets whether to request alternative routes.
     pub fn alternatives(mut self, val: bool) -> Self {
         self.alternatives = val;
         self
     }
 
+    /// Sets whether to include turn-by-turn navigation steps in the response.
     pub fn steps(mut self, val: bool) -> Self {
         self.steps = val;
         self
     }
 
+    /// Sets whether to include per-segment annotations in the route.
     pub fn annotations(mut self, val: bool) -> Self {
         self.annotations = val;
         self
     }
 
+    /// Sets the geometry encoding type for the route response.
     pub fn geometry(mut self, val: GeometryType) -> Self {
         self.geometry = val;
         self
     }
 
+    /// Sets the overview simplification level for the route.
     pub fn overview(mut self, val: OverviewZoom) -> Self {
         self.overview = val;
         self
     }
 
+    /// Sets whether the route should continue straight at waypoints where possible.
     pub fn continue_straight(mut self, val: bool) -> Self {
         self.continue_straight = val;
         self
     }
 
+    /// Sets per-point bearings to constrain the direction of travel.
+    ///
+    /// Each bearing must correspond to the point at the same index.
     pub fn bearings(mut self, bearings: &'a [Option<Bearing>]) -> Self {
         self.bearings = Some(bearings);
         self
     }
 
+    /// Sets per-point search radiuses (in meters) for coordinate snapping.
+    ///
+    /// Each radius must correspond to the point at the same index.
     pub fn radiuses(mut self, coordinate_radiuses: &'a [Option<f64>]) -> Self {
         self.radiuses = Some(coordinate_radiuses);
         self
     }
 
+    /// Sets whether to include generated location hints in the response.
     pub fn generate_hints(mut self, generate_hints: bool) -> Self {
         self.generate_hints = generate_hints;
         self
     }
 
+    /// Sets precomputed location hints for faster coordinate matching.
+    ///
+    /// Each hint corresponds to the point at the same index.
     pub fn hints(mut self, coordinate_hints: &'a [Option<&'a str>]) -> Self {
         self.hints = Some(coordinate_hints);
         self
     }
 
+    /// Sets per-point approaches to control the side of the road to access from.
     pub fn approaches(mut self, approach_direction: &'a [Approach]) -> Self {
         self.approaches = Some(approach_direction);
         self
     }
+
+    /// Sets which road classes should be excluded from route generation.
+    ///
+    /// All excludes must belong to the same transport mode.
     pub fn exclude(mut self, exclude: &'a [Exclude]) -> Self {
         self.exclude = Some(exclude);
         self
     }
 
+    /// Sets the snapping behavior for input coordinates.
     pub fn snapping(mut self, snapping: Snapping) -> Self {
         self.snapping = Some(snapping);
         self
     }
 
+    /// Sets whether to skip including waypoint data in the response.
     pub fn skip_waypoints(mut self, skip_waypoints: bool) -> Self {
         self.skip_waypoints = skip_waypoints;
         self
     }
 
+    /// Builds a [`RouteRequest`] from the configured parameters.
+    ///
+    /// Performs validation to ensure all per-point array options
+    /// have consistent lengths and compatible types.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`RouteRequestError`] if:
+    /// - Fewer than two points were provided.
+    /// - Array lengths do not match the number of points.
+    /// - Exclude types mix transport modes.
     pub fn build(self) -> Result<RouteRequest<'a>, RouteRequestError> {
         if self.points.len() < 2 {
             return Err(RouteRequestError::InsufficientPoints);
         }
+
         #[allow(clippy::collapsible_if)]
         if let Some(bearings) = self.bearings {
             if bearings.len() != self.points.len() {
@@ -154,6 +279,7 @@ impl<'a> RouteRequestBuilder<'a> {
                 ));
             }
         }
+
         #[allow(clippy::collapsible_if)]
         if let Some(hints) = self.hints {
             if hints.len() != self.points.len() {
@@ -171,6 +297,7 @@ impl<'a> RouteRequestBuilder<'a> {
                 ));
             }
         }
+
         #[allow(clippy::collapsible_if)]
         if let Some(exclude) = self.exclude {
             if !exclude.is_empty() {

@@ -1,3 +1,7 @@
+//! The top level error types returned from the services.
+//! `NativeOsrmError`, `RemoteOsrmError` and `OsrmError`
+//! which includes former pair.
+
 use thiserror::Error;
 
 #[derive(Error, Debug)]

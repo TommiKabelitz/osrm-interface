@@ -1,8 +1,7 @@
 //! The various response types contained in the responses from OSRM services.
 //!
 //! Documentation is pulled directly from the osrm-backend documentation in
-//! v6.0.0 where it exists. Documentation of the full service responses may be
-//!  found in `service_responses.rs`
+//! v6.0.0 where it exists.
 
 /// Represents a route through (potentially multiple) waypoints.
 #[cfg_attr(feature = "debug", derive(Debug))]

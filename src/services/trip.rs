@@ -1,9 +1,12 @@
+//! Given a set of coordinates, uses greedy heuristic to route the fastest
+//! path through those coordinates.
+
 use thiserror::Error;
 
 use crate::{
+    Point,
     r#match::{Approach, DimensionMismatch},
     osrm_response_types::{Route, Waypoint},
-    point::Point,
     request_types::{Bearing, Exclude, GeometryType, OverviewZoom, Snapping},
 };
 

@@ -1,46 +1,51 @@
 use std::{env, path::PathBuf};
 
 fn main() {
-    let native_enabled = std::env::var("CARGO_FEATURE_NATIVE").is_ok();
+    let native_enabled = env::var("CARGO_FEATURE_NATIVE").is_ok();
     if !native_enabled {
         return;
     }
+
     println!("cargo:rerun-if-changed=src/wrapper.cpp");
     println!("cargo:warning=Compiling OSRM wrapper");
+
+    let is_debug = matches!(env::var("PROFILE").as_deref(), Ok("debug"));
+
+    // Determine backend path
+    let osrm_path = if is_debug {
+        env::var("OSRM_DEBUG_PATH")
+            .or_else(|_| env::var("OSRM_BACKEND_PATH"))
+            .unwrap_or_else(|_| {
+                println!("cargo:warning=No OSRM_DEBUG_PATH or OSRM_BACKEND_PATH set, falling back to /usr/local");
+                "/usr/local".into()
+            })
+    } else {
+        env::var("OSRM_BACKEND_PATH").unwrap_or_else(|_| "/usr/local".into())
+    };
+
+    let include_dir = PathBuf::from(&osrm_path).join("include");
+    let osrm_include_dir = include_dir.join("osrm");
+    let lib_dir = PathBuf::from(&osrm_path).join("lib");
+
+    // Check if essential headers exist
+    if !include_dir.join("osrm.hpp").exists() && !osrm_include_dir.join("osrm.hpp").exists() {
+        panic!(
+            "Could not find OSRM header: osrm.hpp in {} or {}. Make sure OSRM is built or OSRM_BACKEND_PATH is set correctly.",
+            include_dir.display(),
+            osrm_include_dir.display(),
+        );
+    }
+
+    // Start building
     let mut build = cc::Build::new();
     build
         .cpp(true)
         .file("src/wrapper.cpp")
         .flag("-std=c++17")
-        // Expect the osrm headers to be placed in /usr/local/
-        .include("/usr/local/include")
-        .include("/usr/local/include/osrm") // Just in case includes are nested
+        .include(&include_dir)
+        .include(&osrm_include_dir)
         .define("ENABLE_LTO", "Off")
         .define("FMT_HEADER_ONLY", None);
-
-    let is_debug = matches!(env::var("PROFILE").as_deref(), Ok("debug"));
-
-    let (osrm_include, osrm_lib) = if is_debug {
-        match env::var("OSRM_DEBUG_PATH") {
-            Ok(path) => {
-                println!("cargo:warning=Using DEBUG OSRM from {}", path);
-                (format!("{}/include", path), format!("{}/", path))
-            }
-            Err(_) => {
-                println!(
-                    "cargo:warning=OSRM_DEBUG_PATH not set — falling back to system /usr/local"
-                );
-                ("/usr/local/include".into(), "/usr/local/lib".into())
-            }
-        }
-    } else {
-        println!("cargo:warning=Using RELEASE OSRM from /usr/local");
-        ("/usr/local/include".into(), "/usr/local/lib".into())
-    };
-
-    build
-        .include(&osrm_include)
-        .include(format!("{}/osrm", osrm_include));
 
     if is_debug {
         build
@@ -54,38 +59,27 @@ fn main() {
 
     build.compile("osrm_wrapper");
 
-    // Cargo receives information about linking through print statements
-    // with metadata as follows
+    // Link directories
+    println!("cargo:rustc-link-search=native={}", lib_dir.display());
 
-    // Linking the actual OSRM library
-    println!("cargo:rustc-link-search=native={}", osrm_lib);
-
-    // Link the various osrm commands
     println!("cargo:rustc-link-lib=static=osrm");
-    println!("cargo:rustc-link-lib=static=osrm_store");
-    println!("cargo:rustc-link-lib=static=osrm_extract");
-    println!("cargo:rustc-link-lib=static=osrm_partition");
-    println!("cargo:rustc-link-lib=static=osrm_update");
-    println!("cargo:rustc-link-lib=static=osrm_guidance");
-    println!("cargo:rustc-link-lib=static=osrm_customize");
-    println!("cargo:rustc-link-lib=static=osrm_contract");
 
-    // // Link OSRM system deps
-    println!("cargo:rustc-link-lib=dylib=boost_thread");
-    println!("cargo:rustc-link-lib=dylib=boost_filesystem");
-    println!("cargo:rustc-link-lib=dylib=boost_iostreams");
-    println!("cargo:rustc-link-lib=dylib=tbb");
-    println!("cargo:rustc-link-lib=dylib=stdc++");
+    // Link system deps
+    for lib in &[
+        "boost_thread",
+        "boost_filesystem",
+        "boost_iostreams",
+        "tbb",
+        "stdc++",
+        "z",
+        "bz2",
+        "expat",
+    ] {
+        println!("cargo:rustc-link-lib=dylib={}", lib);
+    }
 
-    println!("cargo:rustc-link-lib=dylib=z");
-    println!("cargo:rustc-link-lib=dylib=bz2");
-    println!("cargo:rustc-link-lib=dylib=expat");
-
-    // Link the OSRM wrapper
-    let wrapper_dir = PathBuf::from(
-        env::var("OUT_DIR").expect("Wrapper build failed to specify output directory"),
-    );
-
-    println!("cargo:rustc-link-search=native={}", wrapper_dir.display());
+    // Link wrapper
+    let out_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR not set"));
+    println!("cargo:rustc-link-search=native={}", out_dir.display());
     println!("cargo:rustc-link-lib=static=osrm_wrapper");
 }

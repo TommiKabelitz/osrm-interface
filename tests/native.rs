@@ -6,10 +6,10 @@ use std::f64::consts::PI;
 use common::init_native_engine;
 
 use osrm_interface::{
+    Point,
     r#match::MatchRequestBuilder,
     nearest::NearestRequestBuilder,
     osrm_response_types::Geometry,
-    point::Point,
     request_types::{Bearing, CarExclude, Exclude, GeometryType, OverviewZoom},
     route::RouteRequestBuilder,
     table::TableRequestBuilder,

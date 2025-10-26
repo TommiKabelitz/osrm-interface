@@ -1,8 +1,11 @@
+//! Given a set of coordinates (and optionally timestamps) determine
+//! the likely route taken. Matching those coordinates to a route.
+
 use thiserror::Error;
 
 use crate::{
+    Point,
     osrm_response_types::{MatchRoute, MatchWaypoint},
-    point::Point,
     request_types::{Bearing, Exclude, GeometryType, OverviewZoom},
 };
 
@@ -44,8 +47,93 @@ impl Approach {
     }
 }
 
+/// Helper struct for building a [`MatchRequest`].
+///
+/// Set options using the struct methods before calling
+/// [`build`](Self::build). The `build` method attempts to
+/// check for invalid requests before the request is passed
+/// to the service
+///
+/// ## Options:
+///
+/// - **`points`** (*required*) — A slice of [`Point`]s to match along the road network.
+///   Must contain at least two points.
+///
+/// - **`steps`** (*default:* `false`) — If `true`, includes turn-by-turn navigation
+///   instructions for each matched segment.
+///
+/// - **`geometry`** (*default:* `GeometryType::Polyline`) — Specifies the encoding
+///   format for the returned geometry. See [`GeometryType`] for options.
+///
+/// - **`overview`** (*default:* `OverviewZoom::Simplified`) — Controls the
+///   generalization level of the route overview geometry. See [`OverviewZoom`].
+///
+/// - **`annotations`** (*default:* `false`) — When enabled, includes metadata such as
+///   distance, duration, and speed values for each segment.
+///
+/// - **`gaps`** (*default:* `MatchGapsBehaviour::Split`) — Defines how to handle gaps
+///   in GPS traces. Options are:
+///   - `Split`: Splits the trace into sub-traces at gaps, requires `timestamps`.
+///   - `Ignore`: Attempts to match through gaps without splitting.
+///
+/// - **`tidy`** (*default:* `false`) — If `true`, removes outlier points before matching.
+///
+/// - **`waypoints`** (*optional*) — A slice of indices (into `points`) marking which
+///   points should be treated as waypoints. Must not be empty or out of bounds.
+///
+/// - **`exclude`** (*optional*) — A slice of [`Exclude`] values, all of the same
+///   transport mode (e.g., only `Exclude::Car` or only `Exclude::Bicycle`),
+///   specifying road classes to exclude.
+///
+/// - **`generate_hints`** (*default:* `true`) — When enabled, OSRM will return
+///   location hints that can speed up subsequent queries.
+///
+/// ## Array options
+///
+/// The following options require array slices as input. Each input maps 1-1 with the
+/// corresponding [`Point`] by index. Some options allow optional array values which
+/// allow behaviour to be specified only for particular points.
+///
+/// - **`timestamps`** (*optional*) — A slice of UNIX timestamps (in seconds) matching
+///   the `points` array length. Must be sorted in ascending order. Required when
+///   `gaps` is set to [`MatchGapsBehaviour::Split`].
+///
+/// - **`bearings`** (*optional*) — A slice of optional [`Bearing`]s, one per point.
+///   Each defines an allowed direction in which the point may be snapped to a node.
+///   None => Any direction.
+///
+/// - **`radiuses`** (*optional*) — A slice of optional radiuses (in meters),
+///   constraining how far OSRM may search from each coordinate. None => infinite.
+///
+/// - **`hints`** (*optional*) — A slice of optional pre-computed location hints,
+///   one per point, to accelerate lookups for known coordinates. Unspecified hints
+///   will be snapped.
+///
+/// - **`approaches`** (*optional*) — A slice of [`Approach`] values specifying
+///   the side of the road (e.g., `Approach::Curb`, `Approach::Unrestricted`)
+///   to approach each waypoint from. `Approach::Unrestricted` is the default behaviour.
+///
+/// ## Example
+///
+/// ```
+/// use osrm_interface::r#match::{MatchRequestBuilder, MatchGapsBehaviour};
+///
+/// let points = [
+///     Point::new(48.040437, 10.316550).expect("Invalid point"),
+///     Point::new(49.006101, 9.052887).expect("Invalid point"),
+///     Point::new(48.942296, 10.510960).expect("Invalid point"),
+///     Point::new(51.248931, 7.594814).expect("Invalid point"),
+/// ];
+///
+/// let match_request = MatchRequestBuilder::new(&points)
+///     .generate_hints(true)
+///     .gaps(MatchGapsBehaviour::Ignore)
+///     .annotations(true)
+///     .build()
+///     .expect("Failed to build MatchRequest");
+/// ```
 pub struct MatchRequestBuilder<'a> {
-    pub points: &'a [Point],
+    points: &'a [Point],
     steps: bool,
     geometry: GeometryType,
     overview: OverviewZoom,
@@ -63,6 +151,9 @@ pub struct MatchRequestBuilder<'a> {
 }
 
 impl<'a> MatchRequestBuilder<'a> {
+    /// Creates a new [`MatchRequestBuilder`] with the required list of `points`.
+    ///
+    /// Default values are applied to all other options.
     pub fn new(points: &'a [Point]) -> Self {
         Self {
             points,
@@ -83,76 +174,122 @@ impl<'a> MatchRequestBuilder<'a> {
         }
     }
 
+    /// Includes or omits step-by-step navigation instructions in the response.
     pub fn steps(mut self, include_steps: bool) -> Self {
         self.steps = include_steps;
         self
     }
 
+    /// Includes or omits metadata (distance, duration, etc.) for each segment.
     pub fn annotations(mut self, include_annotations: bool) -> Self {
         self.annotations = include_annotations;
         self
     }
 
+    /// Sets the geometry encoding format used in the response.
     pub fn geometry(mut self, geometry_type: GeometryType) -> Self {
         self.geometry = geometry_type;
         self
     }
 
+    /// Sets the overview simplification level for the returned route geometry.
     pub fn overview(mut self, overview_zoom: OverviewZoom) -> Self {
         self.overview = overview_zoom;
         self
     }
 
+    /// Sets the timestamps (in seconds) corresponding to each input point.
+    ///
+    /// Must be sorted in ascending order and have the same length as `points`.
+    /// Required when using [`MatchGapsBehaviour::Split`].
     pub fn timestamps(mut self, timestamps: &'a [u64]) -> Self {
         self.timestamps = Some(timestamps);
         self
     }
 
+    /// Sets how to handle gaps in the input trace (split or ignore).
+    ///
+    /// `MatchGapsBehaviour::Split` requires timestamps are set.
     pub fn gaps(mut self, gaps_behaviour: MatchGapsBehaviour) -> Self {
         self.gaps = gaps_behaviour;
         self
     }
 
+    /// Enables or disables tidying of input points (removes outliers).
     pub fn tidy(mut self, do_tidy: bool) -> Self {
         self.tidy = do_tidy;
         self
     }
 
+    /// Specifies which input indices should be treated as waypoints.
+    ///
+    /// Must not be empty or contain out-of-bounds indices.
     pub fn waypoints(mut self, waypoint_indices: &'a [usize]) -> Self {
         self.waypoints = Some(waypoint_indices);
         self
     }
 
+    /// Specifies the allowed snapping direction for each point.
+    ///
+    /// Must have the same length as `points`.
+    /// Null values will allow snapping in all directions.
     pub fn bearings(mut self, bearings: &'a [Option<Bearing>]) -> Self {
         self.bearings = Some(bearings);
         self
     }
 
+    /// Sets the search radius (in meters) for each coordinate.
+    ///
+    /// Must have the same length as `points`.
+    /// Default radius is infinite.
     pub fn radiuses(mut self, coordinate_radiuses: &'a [Option<f64>]) -> Self {
         self.radiuses = Some(coordinate_radiuses);
         self
     }
 
+    /// Enables or disables automatic hint generation.
+    ///
+    /// Hints can speed up subsequent queries for similar coordinates.
     pub fn generate_hints(mut self, generate_hints: bool) -> Self {
         self.generate_hints = generate_hints;
         self
     }
 
+    /// Set pre-generated hints for each coordinate.
+    ///
+    /// Must have the same length as `points`.
+    /// Unspecified coordinates will be snapped.
     pub fn hints(mut self, coordinate_hints: &'a [Option<&'a str>]) -> Self {
         self.hints = Some(coordinate_hints);
         self
     }
 
+    /// Specifies the approach direction for each coordinate.
+    ///
+    /// Must have the same length as `points`.
+    /// Default is `Approach::Unrestricted`.
     pub fn approaches(mut self, approach_direction: &'a [Approach]) -> Self {
         self.approaches = Some(approach_direction);
         self
     }
 
+    /// Excludes specific road classes or transport modes from routing.
+    ///
+    /// All entries must be of the same variant (e.g., all `Exclude::Car`).
     pub fn exclude(mut self, exclude: &'a [Exclude]) -> Self {
         self.exclude = Some(exclude);
         self
     }
 
+    /// Validates and constructs the [`MatchRequest`].
+    ///
+    /// Returns an error if configuration is invalid — for example:
+    /// - Too few points ([`MatchRequestError::TooFewPoints`])
+    /// - Mismatched array lengths ([`MatchRequestError::DimensionMismatch`])
+    /// - Missing timestamps when `gaps` = `Split` ([`MatchRequestError::TimestampsRequiredForSplitBehaviour`])
+    /// - Timestamps not sorted ([`MatchRequestError::TimestampsNotSorted`])
+    /// - Out-of-bounds waypoint indices ([`MatchRequestError::WaypointIndexOutOfBounds`])
+    /// - Mixed `Exclude` types ([`MatchRequestError::DifferentExcludeTypes`])
     pub fn build(self) -> Result<MatchRequest<'a>, MatchRequestError> {
         if self.points.len() < 2 {
             return Err(MatchRequestError::TooFewPoints);

@@ -4,10 +4,10 @@ mod common;
 use common::{init_native_engine, init_remote_engine};
 
 use osrm_interface::{
+    Point,
     r#match::MatchRequestBuilder,
     nearest::NearestRequestBuilder,
     osrm_response_types::Geometry,
-    point::Point,
     request_types::{GeometryType, OverviewZoom},
     route::RouteRequestBuilder,
 };

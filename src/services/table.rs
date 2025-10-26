@@ -1,6 +1,9 @@
+//! Given a set of source and destination coordinates, determine the
+//! distance and/or duration to travel between those locations.
+
 use thiserror::Error;
 
-pub(crate) use crate::point::Point;
+use crate::Point;
 use crate::{
     r#match::{Approach, DimensionMismatch},
     request_types::{Bearing, Exclude, Snapping},
