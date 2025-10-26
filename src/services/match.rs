@@ -6,7 +6,7 @@ use thiserror::Error;
 use crate::{
     Point,
     osrm_response_types::{MatchRoute, MatchWaypoint},
-    request_types::{Bearing, Exclude, GeometryType, OverviewZoom},
+    request_types::{Bearing, Exclude, GeometryType, OverviewZoom, Snapping},
 };
 
 #[derive(Clone)]
@@ -27,6 +27,8 @@ pub struct MatchRequest<'a> {
     pub(crate) hints: Option<&'a [Option<&'a str>]>,
     pub(crate) approaches: Option<&'a [Approach]>,
     pub(crate) exclude: Option<&'a [Exclude]>,
+    pub(crate) snapping: Option<Snapping>,
+    pub(crate) skip_waypoints: bool,
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
@@ -84,6 +86,13 @@ impl Approach {
 /// - **`exclude`** (*optional*) — A slice of [`Exclude`] values, all of the same
 ///   transport mode (e.g., only `Exclude::Car` or only `Exclude::Bicycle`),
 ///   specifying road classes to exclude.
+///
+/// - **`snapping`** (*optional*) — Defines how input coordinates are snapped to
+///   the road network. See [`Snapping`] for available modes.
+///
+/// - **`skip_waypoints`** (*default:* `false`) — When `true`, OSRM omits waypoint
+///   information from the response, reducing payload size. Useful if only
+///   distance and/or duration are required.
 ///
 /// - **`generate_hints`** (*default:* `true`) — When enabled, OSRM will return
 ///   location hints that can speed up subsequent queries.
@@ -148,6 +157,8 @@ pub struct MatchRequestBuilder<'a> {
     hints: Option<&'a [Option<&'a str>]>,
     approaches: Option<&'a [Approach]>,
     exclude: Option<&'a [Exclude]>,
+    snapping: Option<Snapping>,
+    skip_waypoints: bool,
 }
 
 impl<'a> MatchRequestBuilder<'a> {
@@ -171,6 +182,8 @@ impl<'a> MatchRequestBuilder<'a> {
             hints: None,
             approaches: None,
             exclude: None,
+            snapping: None,
+            skip_waypoints: false,
         }
     }
 
@@ -281,6 +294,18 @@ impl<'a> MatchRequestBuilder<'a> {
         self
     }
 
+    /// Sets the snapping behavior for input coordinates.
+    pub fn snapping(mut self, snapping: Snapping) -> Self {
+        self.snapping = Some(snapping);
+        self
+    }
+
+    /// Sets whether to skip including waypoint data in the response.
+    pub fn skip_waypoints(mut self, skip_waypoints: bool) -> Self {
+        self.skip_waypoints = skip_waypoints;
+        self
+    }
+
     /// Validates and constructs the [`MatchRequest`].
     ///
     /// Returns an error if configuration is invalid — for example:
@@ -386,6 +411,8 @@ impl<'a> MatchRequestBuilder<'a> {
             hints: self.hints,
             approaches: self.approaches,
             exclude: self.exclude,
+            snapping: self.snapping,
+            skip_waypoints: self.skip_waypoints,
         })
     }
 }

@@ -59,6 +59,7 @@ const MATCH_TIDY: u8 = 1 << 0;
 const MATCH_STEPS: u8 = 1 << 1;
 const MATCH_ANNOTATIONS: u8 = 1 << 2;
 const MATCH_GENERATE_HINTS: u8 = 1 << 3;
+const MATCH_SKIP_WAYPOINTS: u8 = 1 << 4;
 
 const TRIP_STEPS: u8 = 1 << 0;
 const TRIP_ANNOTATIONS: u8 = 1 << 1;
@@ -183,6 +184,7 @@ unsafe extern "C" {
         num_approaches: usize,
         excludes: *const ArrayString,
         num_excludes: usize,
+        snapping: Snapping,
     ) -> OsrmResult;
 
     fn osrm_nearest(
@@ -441,6 +443,9 @@ impl Osrm {
         if match_request.generate_hints {
             flags |= MATCH_GENERATE_HINTS
         }
+        if match_request.skip_waypoints {
+            flags |= MATCH_SKIP_WAYPOINTS
+        }
 
         let timestamps = match_request.timestamps.unwrap_or(&[]);
         let waypoints = match_request.waypoints.unwrap_or(&[]);
@@ -473,6 +478,7 @@ impl Osrm {
                 .collect(),
             None => Vec::new(),
         };
+        let snapping = match_request.snapping.unwrap_or(Snapping::Default);
 
         let result = unsafe {
             osrm_match(
@@ -497,6 +503,7 @@ impl Osrm {
                 approaches.len(),
                 excludes.as_ptr(),
                 excludes.len(),
+                snapping,
             )
         };
 

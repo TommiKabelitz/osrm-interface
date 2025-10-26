@@ -29,6 +29,7 @@ enum MatchFlags : uint8_t
     MATCH_STEPS = 1 << 1,
     MATCH_ANNOTATIONS = 1 << 2,
     MATCH_GENERATE_HINTS = 1 << 3,
+    MATCH_SKIP_WAYPOINTS = 1 << 4,
 };
 
 struct ArrayString
@@ -515,7 +516,8 @@ extern "C"
                            const osrm::engine::Approach *approaches,
                            size_t num_approaches,
                            const ArrayString *excludes,
-                           size_t num_excludes)
+                           size_t num_excludes,
+                           enum Snapping snapping)
     {
         if (!osrm_instance)
         {
@@ -541,6 +543,8 @@ extern "C"
         params.steps = (flags & MATCH_STEPS) != 0;
         params.annotations = (flags & MATCH_ANNOTATIONS) != 0;
         params.generate_hints = (flags & MATCH_GENERATE_HINTS) != 0;
+        params.skip_waypoints = (flags & MATCH_SKIP_WAYPOINTS) != 0;
+        params.snapping = static_cast<osrm::engine::api::BaseParameters::SnappingType>(snapping);
         if (num_timestamps > 0)
         {
             if (num_timestamps != num_coordinates)

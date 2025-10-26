@@ -594,7 +594,7 @@ impl OsrmEngine {
             .join(";");
 
         let mut url = format!(
-            "{}/match/v1/{}/{coordinates}?steps={}&geometries={}&overview={}&annotations={}&gaps={}&tidy={}&generate_hints={}",
+            "{}/match/v1/{}/{coordinates}?steps={}&geometries={}&overview={}&annotations={}&gaps={}&tidy={}&generate_hints={}&skip_waypoints={}",
             self.endpoint,
             self.profile.url_form(),
             match_request.steps,
@@ -604,6 +604,7 @@ impl OsrmEngine {
             match_request.gaps.url_form(),
             match_request.tidy,
             match_request.generate_hints,
+            match_request.skip_waypoints,
         );
 
         if let Some(timestamps) = match_request.timestamps {
@@ -664,7 +665,9 @@ impl OsrmEngine {
                 .join(",");
             url.push_str(&format!("&exclude={}", exclude));
         }
-
+        if let Some(snapping) = match_request.snapping {
+            url.push_str(&format!("&snapping={}", snapping.url_form()));
+        }
         let response = ureq::get(url)
             .call()
             .map_err(|e| OsrmError::Remote(RemoteOsrmError::EndpointError(e.to_string())))?
