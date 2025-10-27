@@ -13,7 +13,7 @@ use crate::trip::{TripRequest, TripResponse};
 /// The engine for calling into osrm-backend through the HTTP web API.
 
 #[derive(Clone, Debug)]
-#[cfg_attr(doc, doc(cfg(feature = "remote")))]
+#[cfg_attr(docsrs, doc(cfg(feature = "remote")))]
 pub struct OsrmEngine {
     endpoint: String,
     profile: Profile,

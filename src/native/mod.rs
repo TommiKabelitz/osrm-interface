@@ -32,7 +32,6 @@
 //! [osrm documentation](<https://github.com/Project-OSRM/osrm-backend>) for more
 //! information about extracting the map data. The extraction process defines the
 //! Algorithm that should be passed to [`OsrmEngine::new()`].
-//!
 
 mod osrm_engine;
 use crate::r#match::{MatchGapsBehaviour, MatchRequest};
@@ -42,7 +41,7 @@ use crate::route::RouteRequest;
 use crate::services::Approach;
 use crate::table::{TableAnnotation, TableFallbackCoordinate, TableRequest};
 use crate::trip::{TripDestination, TripRequest, TripSource};
-#[cfg_attr(doc, doc(cfg(feature = "native")))]
+#[cfg_attr(docsrs, doc(cfg(feature = "native")))]
 pub use osrm_engine::OsrmEngine;
 
 use std::f64;

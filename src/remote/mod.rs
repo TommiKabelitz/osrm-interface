@@ -18,7 +18,7 @@
 //! it can dispatch to the correct routed instance.
 
 mod osrm_engine;
-#[cfg_attr(doc, doc(cfg(feature = "remote")))]
+#[cfg_attr(docsrs, doc(cfg(feature = "remote")))]
 pub use osrm_engine::OsrmEngine;
 
 /// The profile with which the underlying map data was extracted.

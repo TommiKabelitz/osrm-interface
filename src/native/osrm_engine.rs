@@ -11,7 +11,7 @@ use crate::trip::{TripRequest, TripResponse};
 /// The engine for calling into osrm-backend natively.
 
 #[derive(Clone, Debug)]
-#[cfg_attr(doc, doc(cfg(feature = "native")))]
+#[cfg_attr(docsrs, doc(cfg(feature = "native")))]
 pub struct OsrmEngine {
     instance: Osrm,
 }
