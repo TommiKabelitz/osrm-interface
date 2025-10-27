@@ -1,6 +1,9 @@
 use std::{env, path::PathBuf};
 
 fn main() {
+    if std::env::var("DOCS_RS").is_ok() {
+        return;
+    }
     let native_enabled = env::var("CARGO_FEATURE_NATIVE").is_ok();
     if !native_enabled {
         return;
