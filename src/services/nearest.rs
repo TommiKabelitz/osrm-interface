@@ -16,6 +16,7 @@ use crate::{
 ///
 /// See [`NearestRequestBuilder`] for more information on nearest requests.
 #[derive(Clone, Debug)]
+#[allow(dead_code)]
 pub struct NearestRequest<'a> {
     pub(crate) point: &'a Point,
     pub(crate) number: u64,

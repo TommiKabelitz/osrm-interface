@@ -16,6 +16,7 @@ use crate::{
 ///
 /// See [`TripRequestBuilder`] for more information on trip requests.
 #[derive(Clone, Debug)]
+#[allow(dead_code)]
 pub struct TripRequest<'a> {
     pub(crate) points: &'a [Point],
     pub(crate) roundtrip: bool,

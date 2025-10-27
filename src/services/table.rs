@@ -15,6 +15,7 @@ use crate::services::{Approach, DimensionMismatch};
 /// See [`TableRequestBuilder`] for more information on table requests.
 
 #[derive(Clone, Debug)]
+#[allow(dead_code)]
 pub struct TableRequest<'a> {
     pub(crate) sources: &'a [Point],
     pub(crate) destinations: &'a [Point],

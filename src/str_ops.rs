@@ -2,6 +2,7 @@
 /// number.
 ///
 /// `\n` and `\r\n` are supported newline characters.
+#[allow(dead_code)]
 pub(crate) fn get_index_of_line_col(s: &str, line: usize, col: usize) -> Option<usize> {
     let mut current_line = 1;
     let mut current_col = 1;

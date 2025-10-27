@@ -14,6 +14,7 @@ use crate::{Point, request_types::GeometryType};
 ///
 /// See [`RouteRequestBuilder`] for more information on route requests.
 #[derive(Clone, Debug)]
+#[allow(dead_code)]
 pub struct RouteRequest<'a> {
     pub(crate) points: &'a [Point],
     pub(crate) alternatives: bool,

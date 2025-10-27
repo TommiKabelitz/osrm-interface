@@ -16,6 +16,7 @@ use crate::{
 ///
 /// See [`MatchRequestBuilder`] for more information on match requests.
 #[derive(Clone, Debug)]
+#[allow(dead_code)]
 pub struct MatchRequest<'a> {
     pub(crate) points: &'a [Point],
     pub(crate) steps: bool,

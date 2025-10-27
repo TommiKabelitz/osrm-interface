@@ -119,6 +119,7 @@ pub mod osrm_response_types;
 pub mod request_types;
 mod str_ops;
 
+#[allow(unused_imports)]
 pub(crate) use str_ops::get_index_of_line_col;
 
 #[cfg(feature = "native")]
