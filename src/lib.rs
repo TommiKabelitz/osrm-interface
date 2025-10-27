@@ -1,6 +1,6 @@
 //! osrm-interface provides a comprehensive interface to call into osrm-backend v6.0.0, the
 //! open source routing machine. The crate provides the capability to call into the backend
-//! natively if it is installed through FFI, alternatively through the web API.
+//! natively through FFI if it is installed, alternatively through the web API.
 //!
 //! ## Engines
 //!
