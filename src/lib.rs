@@ -15,8 +15,8 @@
 //! - remote (`feature="remote"`): Call using the web API. Works with `osrm-routed` running locally or
 //!   remotely.
 //! - native (`feature="native"`): Call by natively interfacing into an installed version of osrm-backend
-//!   through a C++ wrapper. REQUIRES A LOCAL INSTALLATION OF `osrm-backend` AND LOCAL VERSIONS OF
-//!   APPROPRIATELY EXTRACTED MAP DATA.
+//!   through a C++ wrapper. **REQUIRES A LOCAL INSTALLATION OF `osrm-backend` AND LOCAL VERSIONS OF
+//!   APPROPRIATELY EXTRACTED MAP DATA.**
 //!
 //! For more information about initialising the engines and their requirements, see their module pages.
 //!
