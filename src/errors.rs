@@ -1,6 +1,6 @@
 //! The top level error types returned from the services.
-//! `NativeOsrmError`, `RemoteOsrmError` and `OsrmError`
-//! which includes former pair.
+//! [`NativeOsrmError`], [`RemoteOsrmError`] and [`OsrmError`]
+//! which includes the former pair.
 
 use thiserror::Error;
 

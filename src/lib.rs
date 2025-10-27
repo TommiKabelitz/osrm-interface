@@ -24,9 +24,10 @@
 //!
 //! The following services are presently supported
 //!
-//! The services use the `crate::Point` struct which is initialised from a (latitude, longitude) pair to
-//! store coordinates in a type safe mannner. Alternatively, exact points in the form of a `Hint`, returned
-//! by nearest (and optionally the other services) which are already snapped to the grid may be used.
+//! The services use the [`Point`] struct which is initialised from a (latitude, longitude) pair to
+//! store coordinates in a type safe mannner. Alternatively, exact points in the form of a `Hint`
+//! (base64 encoded `String`), returned by nearest (and optionally the other services) which are
+//! already snapped to the grid may be used.
 //!
 //! - nearest: Snap the given `Point` to the closest node on the map. Returning the snapped coordinates
 //!   and other information.
@@ -158,7 +159,7 @@ impl Algorithm {
 /// Constructing with `new` will check -90 <= latitude <= 90 and
 /// -180 <= longitude <= 180, returning an Option<>.
 ///
-/// `new_unchecked` is also provided.
+/// [`new_unchecked`](Self::new_unchecked) is also provided.
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[derive(Clone, Copy)]
 pub struct Point {
@@ -169,7 +170,7 @@ pub struct Point {
 impl Point {
     /// Checks -90 <= latitude <= 90 and -180 <= longitude <= 180.
     ///
-    /// Returns `None` if that is not satisfied. Also see `new_unchecked`.
+    /// Returns `None` if that is not satisfied. Also see [`new_unchecked`](Self::new_unchecked).
     pub fn new(latitude: f64, longitude: f64) -> Option<Self> {
         // Range contains produces the same assembly as chained <= and >= with optimisation
         if !((-90.0..=90.0).contains(&latitude) && (-180.0..=180.0).contains(&longitude)) {
