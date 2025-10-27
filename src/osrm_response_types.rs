@@ -4,6 +4,14 @@
 //! v6.0.0 where it exists.
 
 /// Represents a route through (potentially multiple) waypoints.
+///
+/// Route weight information is defined in the map extraction process.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+///
+/// Implements [`serde::Deserialize`] if either of `feature="native"`
+/// or `feature="remote"` are set.
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
@@ -12,9 +20,9 @@
 pub struct Route {
     /// The distance traveled by the route, in meters.
     pub distance: f64,
-    /// The estimated travel time, in number of seconds.
+    /// The estimated travel time, in seconds.
     pub duration: f64,
-    /// The whole geometry of the route value depending on the `overview` parameter,
+    /// The whole geometry of the route depending on the `overview` parameter,
     /// format depending on the `geometries` parameter.
     ///
     /// | overview   | Description                                                                                   |
@@ -46,12 +54,13 @@ impl Default for Route {
 
 /// Represents the geometry of a route or route step, either as a compact
 /// polyline string or as a structured GeoJSON LineString.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+///
+/// Implements [`serde::Deserialize`] if either of `feature="native"`
+/// or `feature="remote"` are set.
 #[cfg_attr(feature = "debug", derive(Debug))]
-// #[cfg_attr(
-//     any(feature = "native", feature = "remote"),
-//     derive(serde::Deserialize)
-// )]
-// #[cfg_attr(any(feature = "native", feature = "remote"), serde(untagged))]
 pub enum Geometry {
     /// Encoded polyline string (precision 5 or 6 depending on request)
     Polyline(String),
@@ -124,6 +133,12 @@ impl<'de> serde::Deserialize<'de> for Geometry {
 }
 
 /// GeoJSON LineString object for route geometry
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+///
+/// Implements [`serde::Deserialize`] if either of `feature="native"`
+/// or `feature="remote"` are set.
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
@@ -145,6 +160,12 @@ impl Default for GeoJsonLineString {
 }
 
 /// Represents a route between two waypoints.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+///
+/// Implements [`serde::Deserialize`] if either of `feature="native"`
+/// or `feature="remote"` are set.
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
@@ -153,7 +174,7 @@ impl Default for GeoJsonLineString {
 pub struct RouteLeg {
     /// The distance traveled by this route leg, in meters.
     pub distance: f64,
-    /// The estimated travel time, in number of seconds.
+    /// The estimated travel time, in seconds.
     pub duration: f64,
     /// The calculated weight of the route leg.
     pub weight: f64,
@@ -195,6 +216,12 @@ impl Default for RouteLeg {
 
 /// Annotation of the whole route leg with fine-grained information about each
 /// segment or node id.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+///
+/// Implements [`serde::Deserialize`] if either of `feature="native"`
+/// or `feature="remote"` are set.
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
@@ -213,6 +240,11 @@ pub struct Annotation {
     pub datasources: Vec<u64>,
     /// The OSM node ID for each coordinate along the route, excluding the
     /// first/last user-supplied coordinates.
+    ///
+    /// This has to be an f64 due to a bug in the OSRM formatting of integer values which
+    /// results in large integers being formatted in scientific notation. This can cause
+    /// large (>10^10) node_ids to be returned incorrectly (by OSRM, they parse correctly
+    /// but are serialized incorrectly)
     pub nodes: Vec<f64>,
     /// The weights between each pair of coordinates.
     /// Does not include any turn costs.
@@ -241,6 +273,12 @@ impl Default for Annotation {
 
 /// A step consists of a maneuver such as a turn or merge,
 /// followed by a distance of travel along a single way to the subsequent step.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+///
+/// Implements [`serde::Deserialize`] if either of `feature="native"`
+/// or `feature="remote"` are set.
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
@@ -313,6 +351,13 @@ impl Default for RouteStep {
     }
 }
 
+/// The legal driving side at the location for this step.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+///
+/// Implements [`serde::Deserialize`] if either of `feature="native"`
+/// or `feature="remote"` are set.
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
@@ -328,6 +373,12 @@ pub enum DrivingSide {
 }
 
 /// Additional metadata related to annotations (used by `Annotation`).
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+///
+/// Implements [`serde::Deserialize`] if either of `feature="native"`
+/// or `feature="remote"` are set.
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
@@ -351,6 +402,12 @@ impl Default for Metadata {
 /// For every step, the very first intersection (`intersections[0]`) corresponds
 /// to the location of the `StepManeuver`. Further intersections are listed for every
 /// cross-way until the next turn instruction.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+///
+/// Implements [`serde::Deserialize`] if either of `feature="native"`
+/// or `feature="remote"` are set.
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
@@ -394,6 +451,12 @@ impl Default for Intersection {
 }
 
 /// The object is used to describe the waypoint on a route.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+///
+/// Implements [`serde::Deserialize`] if either of `feature="native"`
+/// or `feature="remote"` are set.
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
@@ -404,7 +467,9 @@ pub struct Waypoint {
     /// updates) This can be used on subsequent requests to significantly speed up the
     /// query and to connect multiple services. E.g. you can use the `hint` value
     /// obtained by the `nearest` query as `hint` values for `route` inputs.
-    pub hint: String,
+    ///
+    /// `None` if `generate_hints` is set to `false`.
+    pub hint: Option<String>,
     /// Array that contains the [longitude, latitude] pair of the snapped coordinate
     pub location: [f64; 2],
     /// Name of the street the coordinate snapped to
@@ -416,9 +481,10 @@ pub struct Waypoint {
 impl Default for Waypoint {
     fn default() -> Self {
         Self {
-            hint:
+            hint: Some(
                 "KSoKADRYroqUBAEAEAAAABkAAAAGAAAAAAAAABhnCQCLtwAA_0vMAKlYIQM8TMwArVghAwEAAQH1a66g"
                     .to_string(),
+            ),
             location: [13.388799, 52.517033],
             distance: 4.152629,
             name: "Friedrichstraße".to_string(),
@@ -426,7 +492,113 @@ impl Default for Waypoint {
     }
 }
 
+/// The object is used to describe the waypoint on a trip.
+///
+/// Differs from a [`Waypoint`] by the `trips_index` and `waypoint_index`
+/// fields.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+///
+/// Implements [`serde::Deserialize`] if either of `feature="native"`
+/// or `feature="remote"` are set.
+#[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(
+    any(feature = "native", feature = "remote"),
+    derive(serde::Deserialize)
+)]
+pub struct TripWaypoint {
+    /// Unique internal identifier of the segment (ephemeral, not constant over data
+    /// updates) This can be used on subsequent requests to significantly speed up the
+    /// query and to connect multiple services. E.g. you can use the `hint` value
+    /// obtained by the `nearest` query as `hint` values for `route` inputs.
+    ///
+    /// `None` if `generate_hints` is set to `false`.
+    pub hint: Option<String>,
+    /// Array that contains the [longitude, latitude] pair of the snapped coordinate
+    pub location: [f64; 2],
+    /// Name of the street the coordinate snapped to
+    pub name: String,
+    /// The distance, in meters, from the input coordinate to the snapped coordinate
+    pub distance: f64,
+    /// Index to `trips` in [`TripResonse`](crate::trip::TripResponse). The sub-trip the
+    /// point was matched to.
+    pub trips_index: usize,
+    /// Index to the point in [`TripRequest`](crate::trip::TripRequest) that the waypoint
+    /// was matched to.
+    pub waypoint_index: usize,
+}
+
+impl Default for TripWaypoint {
+    fn default() -> Self {
+        Self {
+            hint: Some(
+                "KSoKADRYroqUBAEAEAAAABkAAAAGAAAAAAAAABhnCQCLtwAA_0vMAKlYIQM8TMwArVghAwEAAQH1a66g"
+                    .to_string(),
+            ),
+            location: [13.388799, 52.517033],
+            distance: 4.152629,
+            name: "Friedrichstraße".to_string(),
+            trips_index: 0,
+            waypoint_index: 0,
+        }
+    }
+}
+
+/// The object used to describe a waypoint returned by the nearest service.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+///
+/// Implements [`serde::Deserialize`] if either of `feature="native"`
+/// or `feature="remote"` are set.
+#[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(
+    any(feature = "native", feature = "remote"),
+    derive(serde::Deserialize)
+)]
+pub struct NearestWaypoint {
+    /// Unique internal identifier of the segment (ephemeral, not constant over data
+    /// updates) This can be used on subsequent requests to significantly speed up the
+    /// query and to connect multiple services. E.g. you can use the `hint` value
+    /// obtained by the `nearest` query as `hint` values for `route` inputs.
+    pub hint: String,
+    /// Array that contains the [longitude, latitude] pair of the snapped coordinate
+    pub location: [f64; 2],
+    /// Name of the street the coordinate snapped to
+    pub name: String,
+    /// The distance, in meters, from the input coordinate to the snapped coordinate
+    pub distance: f64,
+    /// The OSM node ID for snapped point.
+    ///
+    /// This has to be an f64 due to a bug in the OSRM formatting of integer values which
+    /// results in large integers being formatted in scientific notation. This can cause
+    /// large (>10^10) node_ids to be returned incorrectly (by OSRM, they parse correctly
+    /// but are serialized incorrectly)
+    pub nodes: Vec<f64>,
+}
+
+impl Default for NearestWaypoint {
+    fn default() -> Self {
+        Self {
+            hint:
+                "KSoKADRYroqUBAEAEAAAABkAAAAGAAAAAAAAABhnCQCLtwAA_0vMAKlYIQM8TMwArVghAwEAAQH1a66g"
+                    .to_string(),
+            location: [13.388799, 52.517033],
+            distance: 4.152629,
+            name: "Friedrichstraße".to_string(),
+            nodes: vec![1.0],
+        }
+    }
+}
+
 /// Represents a maneuver in a route step, such as a turn or merge.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+///
+/// Implements [`serde::Deserialize`] if either of `feature="native"`
+/// or `feature="remote"` are set.
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
@@ -470,6 +642,12 @@ impl Default for StepManeuver {
 }
 
 /// A `Lane` represents a turn lane at the corresponding turn location.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+///
+/// Implements [`serde::Deserialize`] if either of `feature="native"`
+/// or `feature="remote"` are set.
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
@@ -504,6 +682,12 @@ impl Default for Lane {
 
 /// Represents the mode of transportation for a given `RouteStep`.
 /// These values are pulled directly from OSRM’s source code.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+///
+/// Implements [`serde::Deserialize`] if either of `feature="native"`
+/// or `feature="remote"` are set.
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
@@ -575,6 +759,12 @@ pub enum DrivingMode {
 /// Represents a directional instruction used in both `StepManeuver.modifier`
 /// and `Lane.indications`. Values describe the relative change in direction
 /// or lane markings at an intersection.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+///
+/// Implements [`serde::Deserialize`] if either of `feature="native"`
+/// or `feature="remote"` are set.
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
@@ -625,6 +815,12 @@ pub enum Direction {
 
 /// The object is used to describe the waypoint on a route returned from the match
 /// service.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+///
+/// Implements [`serde::Deserialize`] if either of `feature="native"`
+/// or `feature="remote"` are set.
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
@@ -667,6 +863,15 @@ impl Default for MatchWaypoint {
 }
 
 /// Represents a route through (potentially multiple) waypoints.
+/// Specifically returned by the match service.
+///
+/// Differs only from [`Route`] by the `confidence` field.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+///
+/// Implements [`serde::Deserialize`] if either of `feature="native"`
+/// or `feature="remote"` are set.
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),

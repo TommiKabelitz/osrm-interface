@@ -16,6 +16,6 @@ pub fn init_remote_engine(dotenv_path: &str) -> osrm_interface::remote::OsrmEngi
         .expect("Failed to load .env which needs to set OSRM_ROUTED_ADDRESS for remote tests");
     osrm_interface::remote::OsrmEngine::new(
         endpoint.to_string(),
-        osrm_interface::request_types::Profile::Car,
+        osrm_interface::remote::Profile::Car,
     )
 }

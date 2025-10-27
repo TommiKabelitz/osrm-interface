@@ -31,7 +31,7 @@
 //! wrapped in this crate. See the
 //! [osrm documentation](<https://github.com/Project-OSRM/osrm-backend>) for more
 //! information about extracting the map data. The extraction process defines the
-//! Algorithm that should be passed to `native::OsrmEngine::new()`.
+//! Algorithm that should be passed to [`OsrmEngine::new()`].
 //!
 
 mod osrm_engine;
@@ -205,6 +205,9 @@ unsafe extern "C" {
     fn osrm_free_string(s: *mut c_char);
 }
 
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub(crate) struct Osrm {
     instance: *mut c_void,
 }

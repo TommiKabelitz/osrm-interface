@@ -65,17 +65,19 @@ pub struct NearestRequest<'a> {
 /// ## Example
 ///
 /// ```
-/// use osrm_interface::nearest::NearestRequestBuilder;
-///
+/// use osrm_interface::{Point, nearest::NearestRequestBuilder, request_types::Bearing};
 /// let point = Point::new(48.040437, 10.316550).expect("Invalid point");
-///
 /// let nearest_request = NearestRequestBuilder::new(&point, 3)
 ///     .radius(50.0)
 ///     // The actual node may be 20° either side of north of the given point
-///     .bearing(Bearing::new(0, 20))
+///     .bearing(Bearing::new(0, 20).unwrap())
 ///     .build()
 ///     .expect("Failed to build NearestRequest");
 /// ```
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub struct NearestRequestBuilder<'a> {
     point: &'a Point,
     number: u64,
@@ -192,6 +194,7 @@ impl<'a> NearestRequestBuilder<'a> {
 /// construct an invalid [`NearestRequest`].
 #[derive(Error, Debug)]
 pub enum NearestRequestError {
+    /// Cannot mix excludes of different [`Exclude`] variants.
     #[error("Exclude types are not all of the same type")]
     DifferentExcludeTypes,
     /// Radius values must be non-negative.
@@ -199,6 +202,12 @@ pub enum NearestRequestError {
     NegativeRadius,
 }
 
+/// The response type returned by the Nearest service.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+///
+/// Implements [`serde::Deserialize`] if either of `feature="native"`
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),

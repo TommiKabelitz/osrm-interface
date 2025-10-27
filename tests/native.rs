@@ -279,12 +279,12 @@ fn test_native_table() {
 
     assert_eq!(response.code, "Ok", "Response code is not 'Ok'");
     assert_eq!(
-        response.sources.len(),
+        response.sources.unwrap().len(),
         sources.len(),
         "Returned more sources than anticipated"
     );
     assert_eq!(
-        response.destinations.len(),
+        response.destinations.unwrap().len(),
         destinations.len(),
         "Returned more destinations than anticipated"
     );
@@ -312,12 +312,12 @@ fn test_table_options() {
 
     assert_eq!(response.code, "Ok", "Response code is not 'Ok'");
     assert_eq!(
-        response.sources.len(),
+        response.sources.unwrap().len(),
         sources.len(),
         "Returned more sources than anticipated"
     );
     assert_eq!(
-        response.destinations.len(),
+        response.destinations.unwrap().len(),
         destinations.len(),
         "Returned more destinations than anticipated"
     );

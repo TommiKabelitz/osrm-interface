@@ -5,7 +5,7 @@ use thiserror::Error;
 
 use crate::{
     Point,
-    osrm_response_types::{Route, Waypoint},
+    osrm_response_types::{Route, TripWaypoint},
     request_types::{Bearing, Exclude, GeometryType, OverviewZoom, Snapping},
     services::{Approach, DimensionMismatch},
 };
@@ -108,22 +108,28 @@ pub struct TripRequest<'a> {
 /// ## Example
 ///
 /// ```
-/// use osrm_interface::route::{RouteRequestBuilder, OverviewZoom};
-///
+/// use osrm_interface::{
+///     Point,
+///     request_types::OverviewZoom,
+///     trip::{TripRequestBuilder, TripSource},
+/// };
 /// let points = [
 ///     Point::new(48.040437, 10.316550).expect("Invalid point"),
 ///     Point::new(49.006101, 9.052887).expect("Invalid point"),
 ///     Point::new(48.942296, 10.510960).expect("Invalid point"),
 /// ];
-///
 /// let trip_request = TripRequestBuilder::new(&points)
 ///     .roundtrip(true)
 ///     .source(TripSource::First)
 ///     .overview(OverviewZoom::Full)
 ///     .annotations(true)
 ///     .build()
-///     .expect("Failed to build RouteRequest");
+///     .expect("Failed to build TripRequest");
 /// ```
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub struct TripRequestBuilder<'a> {
     points: &'a [Point],
     steps: bool,
@@ -393,15 +399,28 @@ pub enum TripRequestError {
     NegativeRadius,
 }
 
+/// The response type returned by the Trip service.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+///
+/// Implements [`serde::Deserialize`] if either of `feature="native"`
+/// or `feature="remote"` are set.
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
     derive(serde::Deserialize)
 )]
 pub struct TripResponse {
+    /// The response code returned by the service. `"Ok"` denotes
+    /// success, `"NoTrips"` suggests input coordinates are not
+    /// connected.
     pub code: String,
+    /// The [`Route`] objects that assemble the trace.
     pub trips: Vec<Route>,
-    pub waypoints: Vec<Waypoint>,
+    /// The waypoints in the trip, in **input** order. Only `None`
+    /// when `skip_waypoints` is set to `true`.
+    pub waypoints: Option<Vec<TripWaypoint>>,
 }
 
 /// For specifying whether a trip may start anywhere or only

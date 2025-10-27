@@ -4,6 +4,7 @@
 use thiserror::Error;
 
 use crate::Point;
+use crate::osrm_response_types::Waypoint;
 use crate::request_types::{Bearing, Exclude, Snapping};
 use crate::services::{Approach, DimensionMismatch};
 
@@ -109,25 +110,29 @@ pub struct TableRequest<'a> {
 /// ## Example
 ///
 /// ```
-/// use osrm_interface::table::{TableRequestBuilder, TableAnnotation};
-///
+/// use osrm_interface::{
+///    Point,
+///    table::{TableAnnotation, TableFallbackCoordinate, TableRequestBuilder},
+/// };
 /// let sources = [
 ///     Point::new(48.040437, 10.316550).expect("Invalid point"),
 ///     Point::new(49.006101, 9.052887).expect("Invalid point"),
 /// ];
-///
 /// let destinations = [
 ///     Point::new(48.942296, 10.510960).expect("Invalid point"),
 ///     Point::new(49.015000, 9.060000).expect("Invalid point"),
 /// ];
-///
 /// let table_request = TableRequestBuilder::new(&sources, &destinations)
-///     .annotations(TableAnnotation::DurationDistance)
+///     .annotations(TableAnnotation::Duration)
 ///     .fallback(TableFallbackCoordinate::Input, 13.9)
 ///     .scale_factor(1.0)
 ///     .build()
 ///     .expect("Failed to build TableRequest");
 /// ```
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub struct TableRequestBuilder<'a> {
     sources: &'a [Point],
     destinations: &'a [Point],
@@ -522,6 +527,10 @@ pub enum TableAnnotation {
     All = 3,
 }
 impl TableAnnotation {
+    /// Formats the variant as a lowercase &str. The form expected
+    /// by `osrm-routed`.
+    ///
+    /// eg. `"none"` or `"duration"`, etc.
     pub fn url_form(&self) -> &'static str {
         match self {
             Self::None => "none",
@@ -557,6 +566,10 @@ pub enum TableFallbackCoordinate {
     Snapped = 1,
 }
 impl TableFallbackCoordinate {
+    /// Formats the variant as a lowercase &str. The form expected
+    /// by `osrm-routed`.
+    ///
+    /// eg. `"input"` or `"snapped"`
     pub fn url_form(&self) -> &'static str {
         match self {
             Self::Input => "input",
@@ -565,32 +578,34 @@ impl TableFallbackCoordinate {
     }
 }
 
+/// The response type returned by the Table service.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+///
+/// Implements [`serde::Deserialize`] if either of `feature="native"`
+/// or `feature="remote"` are set.
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
     derive(serde::Deserialize)
 )]
-#[allow(dead_code)]
 pub struct TableResponse {
-    /// If the request was successful "Ok" otherwise see the service dependent and general status codes
+    /// The response code returned by the service. `"Ok"` denotes
+    /// success, `"NoTable"` suggests the input coordinates were disconnected
+    /// and fallback was not specified.
     pub code: String,
-    pub destinations: Vec<TableLocationEntry>,
+    /// Array of `Waypoint` objects describing all sources in order. Only `None`
+    /// when `skip_waypoints` is set to `true`.
+    pub sources: Option<Vec<Waypoint>>,
+    /// Array of `Waypoint` objects describing all destinations in order. Only `None`
+    /// when `skip_waypoints` is set to `true`.
+    pub destinations: Option<Vec<Waypoint>>,
     /// Array of arrays that stores the matrix in row-major order. `durations[i][j]` gives the travel time from the i-th source to the j-th destination. Values are given in seconds. Can be `null` if no route between `i` and `j` can be found
     pub durations: Option<Vec<Vec<Option<f64>>>>,
     /// Array of arrays that stores the matrix in row-major order. `distances[i][j]` gives the travel distance from the i-th source to the j-th destination. Values are given in meters. Can be `null` if no route between `i` and `j` can be found
     pub distances: Option<Vec<Vec<Option<f64>>>>,
-    pub sources: Vec<TableLocationEntry>,
-}
-
-#[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(
-    any(feature = "native", feature = "remote"),
-    derive(serde::Deserialize)
-)]
-pub struct TableLocationEntry {
-    /// Hint is only null when generate_hints=false
-    pub hint: Option<String>,
-    pub location: [f64; 2],
-    pub name: String,
-    pub distance: f64,
+    /// Array of arrays containing the fallback speeds used for each cell (if used).
+    /// Will be absent if fallback_speed is not used.
+    pub fallback_speed_cells: Option<Vec<Vec<f64>>>,
 }

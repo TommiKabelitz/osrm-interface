@@ -2,11 +2,15 @@ use crate::Point;
 use crate::errors::OsrmError;
 use crate::r#match::{MatchRequest, MatchResponse};
 use crate::nearest::{NearestRequest, NearestResponse};
-use crate::osrm_response_types::{MatchRoute, MatchWaypoint, Route, Waypoint};
+use crate::osrm_response_types::{MatchRoute, MatchWaypoint, Route, TripWaypoint, Waypoint};
 use crate::route::{RouteRequest, RouteResponse, SimpleRouteResponse};
-use crate::table::{TableAnnotation, TableLocationEntry, TableRequest, TableResponse};
+use crate::table::{TableAnnotation, TableRequest, TableResponse};
 use crate::trip::{TripRequest, TripResponse};
 
+/// The engine for calling into the mocked osrm-backend.
+///
+/// The mock engine returns data of the appropriate type,
+/// but all data is fabricated.
 pub struct OsrmEngine {}
 
 impl OsrmEngine {
@@ -61,28 +65,33 @@ impl OsrmEngine {
 
         Ok(TableResponse {
             code: "Ok".to_string(),
-            destinations: table_request
-                .destinations
-                .iter()
-                .map(|p| TableLocationEntry {
-                    hint: Some("Mock hint".to_string()),
-                    location: [p.latitude(), p.longitude()],
-                    name: "Mock name".to_string(),
-                    distance: 0.0,
-                })
-                .collect(),
-            sources: table_request
-                .sources
-                .iter()
-                .map(|p| TableLocationEntry {
-                    hint: Some("Mock hint".to_string()),
-                    location: [p.latitude(), p.longitude()],
-                    name: "Mock name".to_string(),
-                    distance: 0.0,
-                })
-                .collect(),
+            destinations: Some(
+                table_request
+                    .destinations
+                    .iter()
+                    .map(|p| Waypoint {
+                        hint: Some("Mock hint".to_string()),
+                        location: [p.latitude(), p.longitude()],
+                        name: "Mock name".to_string(),
+                        distance: 0.0,
+                    })
+                    .collect(),
+            ),
+            sources: Some(
+                table_request
+                    .sources
+                    .iter()
+                    .map(|p| Waypoint {
+                        hint: Some("Mock hint".to_string()),
+                        location: [p.latitude(), p.longitude()],
+                        name: "Mock name".to_string(),
+                        distance: 0.0,
+                    })
+                    .collect(),
+            ),
             durations,
             distances,
+            fallback_speed_cells: None,
         })
     }
 
@@ -109,7 +118,7 @@ impl OsrmEngine {
                     .points
                     .iter()
                     .map(|p| Waypoint {
-                        hint: "Mock hint".to_string(),
+                        hint: Some("Mock hint".to_string()),
                         location: [p.latitude(), p.longitude()],
                         name: "Mock name".to_string(),
                         distance: 0.0,
@@ -134,16 +143,21 @@ impl OsrmEngine {
         Ok(TripResponse {
             code: "Ok".to_string(),
             trips,
-            waypoints: trip_request
-                .points
-                .iter()
-                .map(|p| Waypoint {
-                    hint: "Mock hint".to_string(),
-                    location: [p.latitude(), p.longitude()],
-                    name: "Mock name".to_string(),
-                    distance: 0.0,
-                })
-                .collect(),
+            waypoints: Some(
+                trip_request
+                    .points
+                    .iter()
+                    .enumerate()
+                    .map(|(i, p)| TripWaypoint {
+                        hint: Some("Mock hint".to_string()),
+                        location: [p.latitude(), p.longitude()],
+                        name: "Mock name".to_string(),
+                        distance: 0.0,
+                        trips_index: i,
+                        waypoint_index: i,
+                    })
+                    .collect(),
+            ),
         })
     }
 
@@ -174,7 +188,7 @@ impl OsrmEngine {
         Ok(NearestResponse {
             code: "Ok".to_string(),
             waypoints: vec![Waypoint {
-                hint: "Mock hint".to_string(),
+                hint: Some("Mock hint".to_string()),
                 location: [point.latitude(), point.longitude()],
                 name: "Mock name".to_string(),
                 distance: 0.0,

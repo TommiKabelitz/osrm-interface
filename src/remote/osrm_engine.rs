@@ -4,16 +4,21 @@ use crate::Point;
 use crate::errors::{OsrmError, RemoteOsrmError};
 use crate::r#match::{MatchRequest, MatchResponse};
 use crate::nearest::{NearestRequest, NearestResponse};
-use crate::request_types::{Exclude, Profile};
+use crate::remote::Profile;
+use crate::request_types::Exclude;
 use crate::route::{RouteRequest, RouteRequestBuilder, RouteResponse, SimpleRouteResponse};
-use crate::table::{TableAnnotation, TableRequest, TableResponse};
+use crate::table::{TableRequest, TableResponse};
 use crate::trip::{TripRequest, TripResponse};
 
 /// The engine for calling into osrm-backend through the HTTP web API.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(doc, doc(cfg(feature = "remote")))]
 pub struct OsrmEngine {
     endpoint: String,
-    pub profile: Profile,
+    profile: Profile,
 }
 
 impl OsrmEngine {
@@ -45,9 +50,6 @@ impl OsrmEngine {
     pub fn table(&self, table_request: TableRequest) -> Result<TableResponse, OsrmError> {
         let len_sources = table_request.sources.len();
         let len_destinations = table_request.destinations.len();
-        if len_sources == 0 || len_destinations == 0 {
-            return Err(OsrmError::InvalidTableRequest);
-        }
 
         let coordinates = table_request
             .sources
@@ -67,32 +69,6 @@ impl OsrmEngine {
             self.profile.url_form(),
             table_request.generate_hints
         );
-
-        match (
-            table_request.fallback_coordinate,
-            table_request.fallback_speed,
-        ) {
-            (Some(coord), Some(speed)) => url.push_str(&format!(
-                "&fallback_speed={}&fallback_coordinate={}",
-                speed,
-                coord.url_form()
-            )),
-            (None, None) => (),
-            _ => return Err(OsrmError::InvalidTableRequest),
-        }
-        match (table_request.scale_factor, table_request.annotations) {
-            (Some(scale), TableAnnotation::All | TableAnnotation::Duration) => {
-                url.push_str(&format!(
-                    "&annotations={}&scale_factor={}",
-                    table_request.annotations.url_form(),
-                    scale
-                ))
-            }
-            (Some(_), _) => return Err(OsrmError::InvalidTableRequest),
-            (None, annotations) => {
-                url.push_str(&format!("&annotations={}", annotations.url_form()))
-            }
-        }
 
         // I know this is repetitive, but I don't really care. Defining a
         // generic function feels like overkill and I can't be bothered with
@@ -295,10 +271,6 @@ impl OsrmEngine {
     ///
     /// Finds the fastest route between coordinates in the supplied order.
     pub fn route(&self, route_request: &RouteRequest) -> Result<RouteResponse, OsrmError> {
-        let len = route_request.points.len();
-        if len == 0 {
-            return Err(OsrmError::InvalidRouteRequest);
-        }
         let coordinates = route_request
             .points
             .iter()
@@ -395,10 +367,6 @@ impl OsrmEngine {
     /// approximation. Note that all input coordinates have to be connected
     /// for the trip service to work.
     pub fn trip(&self, trip_request: &TripRequest) -> Result<TripResponse, OsrmError> {
-        let len = trip_request.points.len();
-        if len == 0 {
-            return Err(OsrmError::InvalidTripRequest);
-        }
         let coordinates = trip_request
             .points
             .iter()
@@ -583,10 +551,6 @@ impl OsrmEngine {
     /// could not be found. The algorithm might not be able to match all
     /// points. Outliers are removed if they can not be matched successfully.
     pub fn r#match(&self, match_request: &MatchRequest) -> Result<MatchResponse, OsrmError> {
-        if match_request.points.is_empty() {
-            return Err(OsrmError::InvalidMatchRequest);
-        }
-
         let coordinates = match_request
             .points
             .iter()

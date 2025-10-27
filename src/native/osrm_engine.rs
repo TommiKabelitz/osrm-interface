@@ -9,6 +9,10 @@ use crate::table::{TableRequest, TableResponse};
 use crate::trip::{TripRequest, TripResponse};
 
 /// The engine for calling into osrm-backend natively.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(doc, doc(cfg(feature = "native")))]
 pub struct OsrmEngine {
     instance: Osrm,
@@ -60,10 +64,6 @@ impl OsrmEngine {
     ///
     /// Finds the fastest route between coordinates in the supplied order.
     pub fn route(&self, route_request: &RouteRequest) -> Result<RouteResponse, OsrmError> {
-        let len = route_request.points.len();
-        if len == 0 {
-            return Err(OsrmError::InvalidRouteRequest);
-        }
         let result = self
             .instance
             .route(route_request)
@@ -172,10 +172,6 @@ impl OsrmEngine {
     /// could not be found. The algorithm might not be able to match all
     /// points. Outliers are removed if they can not be matched successfully.
     pub fn r#match(&self, match_request: &MatchRequest) -> Result<MatchResponse, OsrmError> {
-        if match_request.points.is_empty() {
-            return Err(OsrmError::InvalidMatchRequest);
-        }
-
         let result = self
             .instance
             .r#match(match_request)

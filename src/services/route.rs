@@ -104,14 +104,12 @@ pub struct RouteRequest<'a> {
 /// ## Example
 ///
 /// ```
-/// use osrm_interface::route::{RouteRequestBuilder, OverviewZoom};
-///
+/// use osrm_interface::{Point, request_types::OverviewZoom, route::RouteRequestBuilder};
 /// let points = [
 ///     Point::new(48.040437, 10.316550).expect("Invalid point"),
 ///     Point::new(49.006101, 9.052887).expect("Invalid point"),
 ///     Point::new(48.942296, 10.510960).expect("Invalid point"),
 /// ];
-///
 /// let route_request = RouteRequestBuilder::new(&points)
 ///     .steps(true)
 ///     .alternatives(true)
@@ -120,6 +118,10 @@ pub struct RouteRequest<'a> {
 ///     .build()
 ///     .expect("Failed to build RouteRequest");
 /// ```
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub struct RouteRequestBuilder<'a> {
     points: &'a [Point],
     alternatives: bool,
@@ -365,16 +367,28 @@ impl<'a> RouteRequestBuilder<'a> {
 /// construct an invalid [`RouteRequest`].
 #[derive(Error, Debug)]
 pub enum RouteRequestError {
+    // Route requires at least 2 points.
     #[error("Route requires at least 2 points")]
     InsufficientPoints,
+    /// Mismatch of number of elements between points and one
+    /// of the array-like options.
     #[error("Mismatch of dimensions between Points and {0:?}")]
     DimensionMismatch(DimensionMismatch),
+    /// Cannot mix excludes of different [`Exclude`] variants.
     #[error("Exclude types are not all of the same type")]
     DifferentExcludeTypes,
+    /// Radius values must be non-negative.
     #[error("Radii must be non-negative")]
     NegativeRadius,
 }
 
+/// The response type returned by the Route service.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+///
+/// Implements [`serde::Deserialize`] if either of `feature="native"`
+/// or `feature="remote"` are set.
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
@@ -382,12 +396,14 @@ pub enum RouteRequestError {
 )]
 #[allow(dead_code)]
 pub struct RouteResponse {
-    /// If the request was successful "Ok" otherwise see the service dependent and general status codes
+    /// The response code returned by the service. `"Ok"` denotes
+    /// success, `"NoRoute"` suggests input coordinates are not
+    /// connected.
     pub code: String,
     /// An array of `Route` objects, ordered by descending recommendation rank
     pub routes: Vec<Route>,
-    /// Array of `Waypoint` objects representing all waypoints in order. Only None
-    /// when the request is passed
+    /// Array of `Waypoint` objects representing all waypoints in order. Only `None`
+    /// when `skip_waypoints` is set to `true`.
     pub waypoints: Option<Vec<Waypoint>>,
 }
 

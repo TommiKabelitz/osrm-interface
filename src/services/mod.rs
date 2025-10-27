@@ -21,15 +21,33 @@ pub enum DimensionMismatch {
     Approaches,
 }
 
+/// Allows restricting the direction on the road network at a waypoint.
+/// Relative to the input coordinate.
+///
+/// This allows specification of being on the correct side of the road
+/// ([`Approach::Curb`]) when arriving at a waypoint, being on the opposite
+/// side, or being unrestricted.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[derive(Clone, Copy)]
 #[repr(C)]
 pub enum Approach {
+    /// Require that the approach is made on the correct side of the road to
+    /// the waypoint.
     Curb,
+    /// Require that the approach is made on the opposite side of the road to
+    /// the waypoint.
     Opposite,
+    /// Make no requirements about how the waypoint is approached.
     Unrestricted,
 }
 impl Approach {
+    /// Formats the variant as a lowercase &str. The form expected
+    /// by `osrm-routed`.
+    ///
+    /// eg. `"curb"` or `"opposite"` or `"unrestricted`
     pub fn url_form(&self) -> &'static str {
         match self {
             Self::Curb => "curb",

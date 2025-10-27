@@ -1,14 +1,29 @@
 //! Common request sub-types that are used to build the service requests
 
+/// Specify which geometry type the service should return.
+///
+/// For no geometry, set `OverviewZoom::False` in the builder.
+///
+/// See [`Geometry`](crate::osrm_response_types::Geometry) for more
+/// context about the output format.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
 #[derive(Clone, Copy)]
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[repr(C)]
 pub enum GeometryType {
     Polyline = 0,
+    /// Polyline format, but with 6 decimal points of precision rather
+    /// than 5.
     Polyline6 = 1,
     GeoJSON = 2,
 }
 impl GeometryType {
+    /// Formats the variant as a lowercase &str. The form expected
+    /// by `osrm-routed`.
+    ///
+    /// eg. `"geojson"` or `"polyline"` or `"polyline6`
     pub fn url_form(self) -> &'static str {
         match self {
             Self::GeoJSON => "geojson",
@@ -18,6 +33,15 @@ impl GeometryType {
     }
 }
 
+/// Specify the level of detail for the
+/// [`Geometry`](crate::osrm_response_types::Geometry) returned by
+/// the service.
+///
+/// Setting this as `False` will result in the geometry field being
+/// `None` in the response.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.#[derive(Clone, Copy)]
 #[derive(Clone, Copy)]
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[repr(C)]
@@ -27,28 +51,15 @@ pub enum OverviewZoom {
     False = 2,
 }
 impl OverviewZoom {
+    /// Formats the variant as a lowercase &str. The form expected
+    /// by `osrm-routed`.
+    ///
+    /// eg. `"full"` or `"simplified"` or `"false`
     pub fn url_form(&self) -> &'static str {
         match self {
             Self::Full => "full",
             Self::Simplified => "simplified",
             Self::False => "false",
-        }
-    }
-}
-
-#[derive(Clone, Copy)]
-#[cfg_attr(feature = "debug", derive(Debug))]
-pub enum Profile {
-    Car,
-    Bike,
-    Foot,
-}
-impl Profile {
-    pub fn url_form(self) -> &'static str {
-        match self {
-            Self::Bike => "bike",
-            Self::Car => "car",
-            Self::Foot => "foot",
         }
     }
 }
@@ -116,6 +127,12 @@ impl Default for Bearing {
     }
 }
 
+/// A namespace for the different classes of excludes. Bicycle and
+/// Car excludes cannot be mixed as they are dependent on the map
+/// profile.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[derive(Clone, Copy)]
 pub enum Exclude {
@@ -123,6 +140,10 @@ pub enum Exclude {
     Bicycle(BicycleExclude),
 }
 
+/// Types of nodes from which Car routing may exclude.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[derive(Clone, Copy)]
 pub enum CarExclude {
@@ -130,8 +151,10 @@ pub enum CarExclude {
     Motorway,
     Ferry,
 }
-
 impl CarExclude {
+    /// Formats the variant as a lowercase &str.
+    ///
+    /// eg. `"toll"`, `"motorway"`, `"ferry"`
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Toll => "toll",
@@ -141,9 +164,14 @@ impl CarExclude {
     }
 }
 
+/// Types of nodes from which Bike routing may exclude.
+///
 /// The default Bike profile does not enable
 /// exclusion of ferry, so this is not guaranteed
 /// to work as expected, but it does exist in the code.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[derive(Clone, Copy)]
 pub enum BicycleExclude {
@@ -151,6 +179,9 @@ pub enum BicycleExclude {
 }
 
 impl BicycleExclude {
+    /// Formats the variant as a lowercase &str.
+    ///
+    /// eg. `"ferry"`
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Ferry => "ferry",
@@ -158,14 +189,29 @@ impl BicycleExclude {
     }
 }
 
+/// Specify which nodes may be used for snapping.
+///
+/// With [`Snapping::Default`], input coordinates are snapped to
+/// _accessible_ road segments. This excludes segments marked as
+/// `is_startpoint = false` in the profile. This includes private
+/// driveways or links intended for exit routing.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
 #[derive(Clone, Copy)]
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[repr(C)]
 pub enum Snapping {
+    /// Only snap input coordinates to _accesible_ road segments.
     Default = 0,
+    /// Snap the input coordinate to any node.
     Any = 1,
 }
 impl Snapping {
+    /// Formats the variant as a lowercase &str. The form expected
+    /// by `osrm-routed`.
+    ///
+    /// eg. `"any"` or `"default"`
     pub fn url_form(&self) -> &'static str {
         match self {
             Self::Default => "default",

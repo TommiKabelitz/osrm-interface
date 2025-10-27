@@ -65,7 +65,8 @@
 //! ```
 //! // native engine requires map path and algorithm and returns a Result
 //! // remote engine requires profile and an endpoint address
-//! let engine = osrm_interface::mock::OsrmEngine::new()
+//! use osrm_interface::{Point, route::RouteRequestBuilder};
+//! let engine = osrm_interface::mock::OsrmEngine::new();
 //!
 //! let points = [
 //!     Point::new(48.040437, 10.316550).expect("Invalid point"),

@@ -116,15 +116,16 @@ pub struct MatchRequest<'a> {
 /// ## Example
 ///
 /// ```
-/// use osrm_interface::r#match::{MatchRequestBuilder, MatchGapsBehaviour};
-///
-/// let points = [
+/// use osrm_interface::{
+///     Point,
+///     r#match::{MatchGapsBehaviour, MatchRequestBuilder},
+/// };
+///  let points = [
 ///     Point::new(48.040437, 10.316550).expect("Invalid point"),
 ///     Point::new(49.006101, 9.052887).expect("Invalid point"),
 ///     Point::new(48.942296, 10.510960).expect("Invalid point"),
 ///     Point::new(51.248931, 7.594814).expect("Invalid point"),
 /// ];
-///
 /// let match_request = MatchRequestBuilder::new(&points)
 ///     .generate_hints(true)
 ///     .gaps(MatchGapsBehaviour::Ignore)
@@ -132,6 +133,10 @@ pub struct MatchRequest<'a> {
 ///     .build()
 ///     .expect("Failed to build MatchRequest");
 /// ```
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+#[cfg_attr(feature = "debug", derive(Debug))]
 pub struct MatchRequestBuilder<'a> {
     points: &'a [Point],
     steps: bool,
@@ -480,6 +485,13 @@ impl MatchGapsBehaviour {
     }
 }
 
+/// The response type returned by the Trip service.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
+///
+/// Implements [`serde::Deserialize`] if either of `feature="native"`
+/// or `feature="remote"` are set.
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(
     any(feature = "native", feature = "remote"),
@@ -487,7 +499,15 @@ impl MatchGapsBehaviour {
 )]
 #[allow(dead_code)]
 pub struct MatchResponse {
+    /// The response code returned by the service. `"Ok"` denotes
+    /// success, `"NoMatch"` suggests input coordinates could not
+    /// be matched.
     pub code: String,
+    /// Array of [`MatchWaypoint`] objects representing all points
+    /// of the trace in order. If the tracepoint was omitted by
+    /// map matching because it is an outlier, the entry will be
+    /// `None`.
     pub tracepoints: Vec<Option<MatchWaypoint>>,
+    /// An array of [`MatchRoute`] objects that assemble the trace.
     pub matchings: Vec<MatchRoute>,
 }

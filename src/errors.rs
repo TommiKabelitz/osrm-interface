@@ -4,38 +4,43 @@
 
 use thiserror::Error;
 
+/// Errors specifically from calling a service using the native
+/// OSRM engine.
 #[derive(Error, Debug)]
 pub enum NativeOsrmError {
+    /// Failed to create OSRM instance.
     #[error("Failed to create OSRM instance: {0}")]
     Initialization(String),
+    /// Invalid path to map data.
     #[error("Invalid path parameter: {0}")]
     InvalidPath(String),
+    /// Failed to parse OSRM response.
     #[error("Failed to parse OSRM response: {0}")]
     JsonParse(Box<dyn std::error::Error + Send + Sync>),
+    /// Other FFI error.
     #[error("Internal FFI error: {0}")]
     FfiError(String),
-    #[error("Endpoint error: {0}")]
-    EndpointError(String),
 }
 
+/// Errors specifically from calling a service using the remote
+/// OSRM engine.
 #[derive(Error, Debug)]
 pub enum RemoteOsrmError {
+    // Failed to parse OSRM response.
     #[error("Failed to parse OSRM response: {0}")]
     JsonParse(Box<dyn std::error::Error + Send + Sync>),
+    /// Other error from the request.
     #[error("Endpoint error: {0}")]
     EndpointError(String),
 }
 
+/// A union type for OSRM errors when calling a service.
+///
+/// Not to be confused with the various request errors which
+/// are returned when attempting to _build_ a request.
 #[derive(Error, Debug)]
 pub enum OsrmError {
-    #[error("Sources or destinations are invalid")]
-    InvalidTableRequest,
-    #[error("Match request is invalid")]
-    InvalidMatchRequest,
-    #[error("No points in request")]
-    InvalidRouteRequest,
-    #[error("No points in request")]
-    InvalidTripRequest,
+    /// Request produced an empty response.
     #[error("Request produced an empty response: {0}")]
     EmptyResponse(String),
     #[error("Error from the native backend: {0}")]
