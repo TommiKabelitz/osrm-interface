@@ -53,12 +53,13 @@ impl Profile {
     }
 }
 
-#[cfg_attr(feature = "debug", derive(Debug))]
-#[repr(C)]
 /// A direction in which OSRM may seek a segment to snap to, relative
-/// to the given coordinate. `bearing` is the midpoint of the arc in degrees, clockwise
-/// from true north and `range` the number of degrees in each direction. Hence,
-/// the full size of the arc is `2 * range`.
+/// to the given coordinate. Holds two fields:
+///
+/// - `bearing` is the midpoint of the arc in degrees, clockwise
+///   from true north.
+/// - `range` the number of degrees in each direction. Hence,
+///   the full size of the arc is `2 * range`.
 ///
 /// So to seek a segment in an arc 10 degrees either side of North, use
 /// `Bearing::new(0,10)`. For an arc 90 degrees either side of east, so
@@ -66,6 +67,11 @@ impl Profile {
 ///
 /// `bearing` must be in the range `[0,360]` and `range` in `[0,180]`, both
 /// inclusive.
+///
+/// Constructing with [`new`](Self::new) will check `bearing` and `range` values.
+/// [`new`](Self::new_unchecked) is also provided.
+#[cfg_attr(feature = "debug", derive(Debug))]
+#[repr(C)]
 #[derive(Clone, Copy)]
 pub struct Bearing {
     bearing: i16,
@@ -73,6 +79,10 @@ pub struct Bearing {
 }
 
 impl Bearing {
+    /// Check 0 <= bearing <= 360 and 0 <= range <= 180.
+    ///
+    /// Returns `None` if that is not satisfied. Also see
+    /// [`new_unchecked`](Self::new_unchecked).
     pub fn new(bearing: i16, range: i16) -> Option<Self> {
         if !(0..=360).contains(&bearing) & !(0..=180).contains(&range) {
             return None;
@@ -80,6 +90,18 @@ impl Bearing {
         Some(Self { bearing, range })
     }
 
+    /// Init without checking bearing and range.
+    ///
+    /// OSRM will reject invalid `Bearings` when a request is made
+    /// to a service.
+    pub fn new_unchecked(bearing: i16, range: i16) -> Self {
+        Self { bearing, range }
+    }
+
+    /// Formats the bearing as a comma separated pair. The form expected
+    /// by `osrm-routed`.
+    ///
+    /// `format!("{},{}", self.bearing, self.range)`.
     pub fn url_form(&self) -> String {
         format!("{},{}", self.bearing, self.range)
     }
