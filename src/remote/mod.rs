@@ -25,11 +25,7 @@ pub use osrm_engine::OsrmEngine;
 ///
 /// The profile is placed in the URL. In many cases, it is ignored.
 /// See [`crate::remote`] for more information about `Profile`.
-///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-#[derive(Clone, Copy)]
-#[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Profile {
     Car,
     Bike,

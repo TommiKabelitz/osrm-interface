@@ -7,10 +7,10 @@
 /// See [`Geometry`](crate::osrm_response_types::Geometry) for more
 /// context about the output format.
 ///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-#[derive(Clone, Copy)]
-#[cfg_attr(feature = "debug", derive(Debug))]
+/// Implements [`serde::Deserialize`] and
+/// [`serde::Serialize`] if `feature="serde"` is set.
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(C)]
 pub enum GeometryType {
     Polyline = 0,
@@ -40,10 +40,10 @@ impl GeometryType {
 /// Setting this as `False` will result in the geometry field being
 /// `None` in the response.
 ///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.#[derive(Clone, Copy)]
-#[derive(Clone, Copy)]
-#[cfg_attr(feature = "debug", derive(Debug))]
+/// Implements [`serde::Deserialize`] and
+/// [`serde::Serialize`] if `feature="serde"` is set.
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(C)]
 pub enum OverviewZoom {
     Simplified = 0,
@@ -81,9 +81,12 @@ impl OverviewZoom {
 ///
 /// Constructing with [`new`](Self::new) will check `bearing` and `range` values.
 /// [`new`](Self::new_unchecked) is also provided.
-#[cfg_attr(feature = "debug", derive(Debug))]
+///
+/// Implements [`serde::Deserialize`] and
+/// [`serde::Serialize`] if `feature="serde"` is set.
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Bearing {
     bearing: i16,
     range: i16,
@@ -131,10 +134,10 @@ impl Default for Bearing {
 /// Car excludes cannot be mixed as they are dependent on the map
 /// profile.
 ///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-#[cfg_attr(feature = "debug", derive(Debug))]
-#[derive(Clone, Copy)]
+/// Implements [`serde::Deserialize`] and
+/// [`serde::Serialize`] if `feature="serde"` is set.
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Exclude {
     Car(CarExclude),
     Bicycle(BicycleExclude),
@@ -142,10 +145,10 @@ pub enum Exclude {
 
 /// Types of nodes from which Car routing may exclude.
 ///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-#[cfg_attr(feature = "debug", derive(Debug))]
-#[derive(Clone, Copy)]
+/// Implements [`serde::Deserialize`] and
+/// [`serde::Serialize`] if `feature="serde"` is set.
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CarExclude {
     Toll,
     Motorway,
@@ -170,10 +173,10 @@ impl CarExclude {
 /// exclusion of ferry, so this is not guaranteed
 /// to work as expected, but it does exist in the code.
 ///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-#[cfg_attr(feature = "debug", derive(Debug))]
-#[derive(Clone, Copy)]
+/// Implements [`serde::Deserialize`] and
+/// [`serde::Serialize`] if `feature="serde"` is set.
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BicycleExclude {
     Ferry,
 }
@@ -196,10 +199,10 @@ impl BicycleExclude {
 /// `is_startpoint = false` in the profile. This includes private
 /// driveways or links intended for exit routing.
 ///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-#[derive(Clone, Copy)]
-#[cfg_attr(feature = "debug", derive(Debug))]
+/// Implements [`serde::Deserialize`] and
+/// [`serde::Serialize`] if `feature="serde"` is set.
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(C)]
 pub enum Snapping {
     /// Only snap input coordinates to _accesible_ road segments.

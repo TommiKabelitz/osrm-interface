@@ -9,10 +9,8 @@ use crate::table::{TableRequest, TableResponse};
 use crate::trip::{TripRequest, TripResponse};
 
 /// The engine for calling into osrm-backend natively.
-///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-#[cfg_attr(feature = "debug", derive(Debug))]
+
+#[derive(Clone, Debug)]
 #[cfg_attr(doc, doc(cfg(feature = "native")))]
 pub struct OsrmEngine {
     instance: Osrm,
@@ -125,7 +123,7 @@ impl OsrmEngine {
                 .iter()
                 .map(|l| l.distance)
                 .sum(),
-            durations: route_response
+            duration: route_response
                 .routes
                 .first()
                 .unwrap()

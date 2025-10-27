@@ -168,7 +168,7 @@ impl OsrmEngine {
         Ok(SimpleRouteResponse {
             code: "Ok".to_string(),
             distance: 0.0,
-            durations: 1.0,
+            duration: 1.0,
         })
     }
 

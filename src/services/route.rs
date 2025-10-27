@@ -13,11 +13,7 @@ use crate::{Point, request_types::GeometryType};
 /// validity of the request.
 ///
 /// See [`RouteRequestBuilder`] for more information on route requests.
-///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-#[derive(Clone)]
-#[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone, Debug)]
 pub struct RouteRequest<'a> {
     pub(crate) points: &'a [Point],
     pub(crate) alternatives: bool,
@@ -118,10 +114,8 @@ pub struct RouteRequest<'a> {
 ///     .build()
 ///     .expect("Failed to build RouteRequest");
 /// ```
-///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-#[cfg_attr(feature = "debug", derive(Debug))]
+
+#[derive(Clone, Debug)]
 pub struct RouteRequestBuilder<'a> {
     points: &'a [Point],
     alternatives: bool,
@@ -384,16 +378,10 @@ pub enum RouteRequestError {
 
 /// The response type returned by the Route service.
 ///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-///
-/// Implements [`serde::Deserialize`] if either of `feature="native"`
-/// or `feature="remote"` are set.
-#[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(
-    any(feature = "native", feature = "remote"),
-    derive(serde::Deserialize)
-)]
+/// Implements [`serde::Deserialize`] and
+/// [`serde::Serialize`] if `feature="serde"` is set.
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[allow(dead_code)]
 pub struct RouteResponse {
     /// The response code returned by the service. `"Ok"` denotes
@@ -407,9 +395,19 @@ pub struct RouteResponse {
     pub waypoints: Option<Vec<Waypoint>>,
 }
 
-#[cfg_attr(feature = "debug", derive(Debug))]
+/// The response type returned by the simple_route service.
+///
+/// Implements [`serde::Deserialize`] and
+/// [`serde::Serialize`] if `feature="serde"` is set.
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[derive(Clone, Debug)]
 pub struct SimpleRouteResponse {
+    /// The response code returned by the service. `"Ok"` denotes
+    /// success, `"NoRoute"` suggests input coordinates are not
+    /// connected.
     pub code: String,
-    pub durations: f64,
+    /// The durations of the route returned in seconds.
+    pub duration: f64,
+    /// The distance of the route returned in meters.
     pub distance: f64,
 }

@@ -11,10 +11,8 @@ use crate::table::{TableRequest, TableResponse};
 use crate::trip::{TripRequest, TripResponse};
 
 /// The engine for calling into osrm-backend through the HTTP web API.
-///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-#[cfg_attr(feature = "debug", derive(Debug))]
+
+#[derive(Clone, Debug)]
 #[cfg_attr(doc, doc(cfg(feature = "remote")))]
 pub struct OsrmEngine {
     endpoint: String,
@@ -472,7 +470,7 @@ impl OsrmEngine {
                 .iter()
                 .map(|l| l.distance)
                 .sum(),
-            durations: response
+            duration: response
                 .routes
                 .first()
                 .unwrap()

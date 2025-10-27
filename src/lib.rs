@@ -55,7 +55,8 @@
 //! - `feature="native"`: Enable the native engine - will not compile without the ability to link a compiled version of
 //!   osrm-backend.
 //! - `feature="remote"`: Enable the remote engine for routing through the HTTP web API.
-//! - `feature="debug"`: Add [`Debug`] trait implementation to all structs. All error types implement [`Debug`] by default.
+//! - `feature="serde"`: Add [`serde::Serialize`] and [`serde::Deserialize`] to all types. Response types require `Deserialize`
+//!   when using the remote and native engines anyway, so the remote and native feature flags will enable this flag also.
 //!
 //! ## Example usage
 //!
@@ -134,8 +135,11 @@ pub mod mock;
 /// MLD: Multi-level Dijkstra
 ///
 /// CH: Contraction Hierarchies
-#[cfg_attr(feature = "debug", derive(Debug))]
-#[derive(Clone, Copy)]
+///
+/// Implements [`serde::Deserialize`] and
+/// [`serde::Serialize`] if `feature="serde"` is set.
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Algorithm {
     /// Multi-level Dijkstra
     MLD,
@@ -161,8 +165,11 @@ impl Algorithm {
 /// -180 <= longitude <= 180, returning an Option<>.
 ///
 /// [`new_unchecked`](Self::new_unchecked) is also provided.
-#[cfg_attr(feature = "debug", derive(Debug))]
-#[derive(Clone, Copy)]
+///
+/// Implements [`serde::Deserialize`] and
+/// [`serde::Serialize`] if `feature="serde"` is set.
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Point {
     latitude: f64,
     longitude: f64,

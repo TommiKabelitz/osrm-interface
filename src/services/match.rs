@@ -15,11 +15,7 @@ use crate::{
 /// validity of the request.
 ///
 /// See [`MatchRequestBuilder`] for more information on match requests.
-///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-#[derive(Clone)]
-#[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone, Debug)]
 pub struct MatchRequest<'a> {
     pub(crate) points: &'a [Point],
     pub(crate) steps: bool,
@@ -133,10 +129,7 @@ pub struct MatchRequest<'a> {
 ///     .build()
 ///     .expect("Failed to build MatchRequest");
 /// ```
-///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-#[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone, Debug)]
 pub struct MatchRequestBuilder<'a> {
     points: &'a [Point],
     steps: bool,
@@ -463,10 +456,10 @@ pub enum MatchRequestError {
 ///
 /// `Ignore` must be used when timestamps are not specified.
 ///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-#[derive(Clone, Copy)]
-#[cfg_attr(feature = "debug", derive(Debug))]
+/// Implements [`serde::Deserialize`] and
+/// [`serde::Serialize`] if `feature="serde"` is set.
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(C)]
 pub enum MatchGapsBehaviour {
     Split = 0,
@@ -487,16 +480,10 @@ impl MatchGapsBehaviour {
 
 /// The response type returned by the Trip service.
 ///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-///
-/// Implements [`serde::Deserialize`] if either of `feature="native"`
-/// or `feature="remote"` are set.
-#[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(
-    any(feature = "native", feature = "remote"),
-    derive(serde::Deserialize)
-)]
+/// Implements [`serde::Deserialize`] and
+/// [`serde::Serialize`] if `feature="serde"` is set.
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[allow(dead_code)]
 pub struct MatchResponse {
     /// The response code returned by the service. `"Ok"` denotes

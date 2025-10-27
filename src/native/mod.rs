@@ -207,7 +207,7 @@ unsafe extern "C" {
 
 /// Implements [`Debug`] if the `feature="debug"` feature flag
 /// is set.
-#[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone, Debug)]
 pub(crate) struct Osrm {
     instance: *mut c_void,
 }

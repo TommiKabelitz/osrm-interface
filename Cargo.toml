@@ -3,7 +3,7 @@ name = "osrm_interface"
 version = "0.8.0"
 edition = "2024"
 authors = ["Tommi Kabelitz <tommi.kabelitz@gmail.com>"]
-publish = false
+publish = true
 
 description = "Interface into osrm-backend, supporting native C++ binding and a wrapper around the HTTP request API"
 license = "MIT"
@@ -14,8 +14,9 @@ categories = ["api-bindings", "external-ffi-bindings"]
 
 [features]
 default = []
-remote = ["serde", "serde_json", "ureq"]
-native = ["serde", "serde_json"]
+remote = ["serde", "dep:ureq"]
+native = ["serde", "dep:serde_json"]
+serde = ["dep:serde"]
 debug = []
 
 

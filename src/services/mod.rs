@@ -12,7 +12,7 @@ pub mod trip;
 /// The array-like option for which there
 /// was a dimension mismatch when constructing
 /// a request.
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DimensionMismatch {
     Timestamps,
     Bearings,
@@ -28,10 +28,10 @@ pub enum DimensionMismatch {
 /// ([`Approach::Curb`]) when arriving at a waypoint, being on the opposite
 /// side, or being unrestricted.
 ///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-#[cfg_attr(feature = "debug", derive(Debug))]
-#[derive(Clone, Copy)]
+/// Implements [`serde::Deserialize`] and
+/// [`serde::Serialize`] if `feature="serde"` is set.
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(C)]
 pub enum Approach {
     /// Require that the approach is made on the correct side of the road to

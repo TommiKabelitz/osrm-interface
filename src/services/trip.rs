@@ -15,10 +15,7 @@ use crate::{
 /// validity of the request.
 ///
 /// See [`TripRequestBuilder`] for more information on trip requests.
-///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-#[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone, Debug)]
 pub struct TripRequest<'a> {
     pub(crate) points: &'a [Point],
     pub(crate) roundtrip: bool,
@@ -126,10 +123,7 @@ pub struct TripRequest<'a> {
 ///     .build()
 ///     .expect("Failed to build TripRequest");
 /// ```
-///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-#[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone, Debug)]
 pub struct TripRequestBuilder<'a> {
     points: &'a [Point],
     steps: bool,
@@ -401,16 +395,10 @@ pub enum TripRequestError {
 
 /// The response type returned by the Trip service.
 ///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-///
-/// Implements [`serde::Deserialize`] if either of `feature="native"`
-/// or `feature="remote"` are set.
-#[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(
-    any(feature = "native", feature = "remote"),
-    derive(serde::Deserialize)
-)]
+/// Implements [`serde::Deserialize`] and
+/// [`serde::Serialize`] if `feature="serde"` is set.
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub struct TripResponse {
     /// The response code returned by the service. `"Ok"` denotes
     /// success, `"NoTrips"` suggests input coordinates are not
@@ -426,10 +414,10 @@ pub struct TripResponse {
 /// For specifying whether a trip may start anywhere or only
 /// at the first provided point.
 ///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-#[cfg_attr(feature = "debug", derive(Debug))]
-#[derive(Clone, Copy)]
+/// Implements [`serde::Deserialize`] and
+/// [`serde::Serialize`] if `feature="serde"` is set.
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(C)]
 pub enum TripSource {
     Any,
@@ -451,10 +439,10 @@ impl TripSource {
 /// For specifying whether a trip may end anywhere or only
 /// at the last provided point.
 ///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-#[cfg_attr(feature = "debug", derive(Debug))]
-#[derive(Clone, Copy)]
+/// Implements [`serde::Deserialize`] and
+/// [`serde::Serialize`] if `feature="serde"` is set.
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(C)]
 pub enum TripDestination {
     Any,

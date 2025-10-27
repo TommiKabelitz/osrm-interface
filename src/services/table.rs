@@ -13,11 +13,8 @@ use crate::services::{Approach, DimensionMismatch};
 /// validity of the request.
 ///
 /// See [`TableRequestBuilder`] for more information on table requests.
-///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-#[derive(Clone)]
-#[cfg_attr(feature = "debug", derive(Debug))]
+
+#[derive(Clone, Debug)]
 pub struct TableRequest<'a> {
     pub(crate) sources: &'a [Point],
     pub(crate) destinations: &'a [Point],
@@ -129,10 +126,8 @@ pub struct TableRequest<'a> {
 ///     .build()
 ///     .expect("Failed to build TableRequest");
 /// ```
-///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-#[cfg_attr(feature = "debug", derive(Debug))]
+
+#[derive(Clone, Debug)]
 pub struct TableRequestBuilder<'a> {
     sources: &'a [Point],
     destinations: &'a [Point],
@@ -514,10 +509,10 @@ pub enum TableRequestError {
 
 /// Which metrics should the table service calculate.
 ///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-#[derive(Clone, Copy)]
-#[cfg_attr(feature = "debug", derive(Debug))]
+/// Implements [`serde::Deserialize`] and
+/// [`serde::Serialize`] if `feature="serde"` is set.
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(C)]
 pub enum TableAnnotation {
     None = 0,
@@ -552,10 +547,10 @@ impl TableAnnotation {
 /// [`TableRequestBuilder::fallback`] where the `fallback_speed`
 /// is used to calculate the duration.
 ///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-#[derive(Clone, Copy)]
-#[cfg_attr(feature = "debug", derive(Debug))]
+/// Implements [`serde::Deserialize`] and
+/// [`serde::Serialize`] if `feature="serde"` is set.
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(C)]
 pub enum TableFallbackCoordinate {
     /// Use the unsnapped input coordinate to calculate distance as
@@ -580,16 +575,10 @@ impl TableFallbackCoordinate {
 
 /// The response type returned by the Table service.
 ///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-///
-/// Implements [`serde::Deserialize`] if either of `feature="native"`
-/// or `feature="remote"` are set.
-#[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(
-    any(feature = "native", feature = "remote"),
-    derive(serde::Deserialize)
-)]
+/// Implements [`serde::Deserialize`] and
+/// [`serde::Serialize`] if `feature="serde"` is set.
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub struct TableResponse {
     /// The response code returned by the service. `"Ok"` denotes
     /// success, `"NoTable"` suggests the input coordinates were disconnected

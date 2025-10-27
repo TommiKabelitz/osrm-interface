@@ -15,11 +15,7 @@ use crate::{
 /// validity of the request.
 ///
 /// See [`NearestRequestBuilder`] for more information on nearest requests.
-///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-#[derive(Clone)]
-#[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone, Debug)]
 pub struct NearestRequest<'a> {
     pub(crate) point: &'a Point,
     pub(crate) number: u64,
@@ -74,10 +70,7 @@ pub struct NearestRequest<'a> {
 ///     .build()
 ///     .expect("Failed to build NearestRequest");
 /// ```
-///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-#[cfg_attr(feature = "debug", derive(Debug))]
+#[derive(Clone, Debug)]
 pub struct NearestRequestBuilder<'a> {
     point: &'a Point,
     number: u64,
@@ -192,6 +185,10 @@ impl<'a> NearestRequestBuilder<'a> {
 
 /// The comprehensive error type returned when attempting to
 /// construct an invalid [`NearestRequest`].
+///
+/// Implements [`serde::Deserialize`] and
+/// [`serde::Serialize`] if `feature="serde"` is set.
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[derive(Error, Debug)]
 pub enum NearestRequestError {
     /// Cannot mix excludes of different [`Exclude`] variants.
@@ -204,16 +201,10 @@ pub enum NearestRequestError {
 
 /// The response type returned by the Nearest service.
 ///
-/// Implements [`Debug`] if the `feature="debug"` feature flag
-/// is set.
-///
-/// Implements [`serde::Deserialize`] if either of `feature="native"`
-#[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(
-    any(feature = "native", feature = "remote"),
-    derive(serde::Deserialize)
-)]
-#[allow(dead_code)]
+/// Implements [`serde::Deserialize`] and
+/// [`serde::Serialize`] if `feature="serde"` is set.
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[derive(Clone, Debug)]
 pub struct NearestResponse {
     /// If the request was successful "Ok" otherwise see the service dependent and general status codes.
     pub code: String,
