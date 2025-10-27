@@ -55,7 +55,7 @@
 //! - `feature="native"`: Enable the native engine - will not compile without the ability to link a compiled version of
 //!   osrm-backend.
 //! - `feature="remote"`: Enable the remote engine for routing through the HTTP web API.
-//! - `feature="debug"`: Add `Debug` trait implementation to all structs. Some structs already have `Debug` by default
+//! - `feature="debug"`: Add [`Debug`] trait implementation to all structs. All error types implement [`Debug`] by default.
 //!
 //! ## Example usage
 //!
@@ -145,7 +145,7 @@ pub enum Algorithm {
 impl Algorithm {
     /// Returns the variant only, as a capitalised static str.
     ///
-    /// eg. "MLD" or "CH
+    /// eg. `"MLD"` or `"CH"`
     pub fn as_str(&self) -> &str {
         match self {
             Algorithm::MLD => "MLD",

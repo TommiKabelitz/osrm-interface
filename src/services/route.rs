@@ -3,11 +3,19 @@
 
 use thiserror::Error;
 
-use crate::r#match::{Approach, DimensionMismatch};
 use crate::osrm_response_types::{Route, Waypoint};
 use crate::request_types::{Bearing, Exclude, OverviewZoom, Snapping};
+use crate::services::{Approach, DimensionMismatch};
 use crate::{Point, request_types::GeometryType};
 
+/// The request object passed to the route service. Constructed
+/// through [`RouteRequestBuilder::build`] which verifies the
+/// validity of the request.
+///
+/// See [`RouteRequestBuilder`] for more information on route requests.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
 #[derive(Clone)]
 #[cfg_attr(feature = "debug", derive(Debug))]
 pub struct RouteRequest<'a> {
@@ -154,45 +162,57 @@ impl<'a> RouteRequestBuilder<'a> {
         }
     }
 
+    /// Overwrite the points provided at construction of the builder. Useful
+    /// for reusing a builder with the same options.
+    ///
+    /// Take care that array-like options are still the same length as points,
+    /// [`build`](Self::build) will throw an error if not.
+    pub fn points(mut self, points: &'a [Point]) -> Self {
+        self.points = points;
+        self
+    }
+
     /// Sets whether to request alternative routes.
-    pub fn alternatives(mut self, val: bool) -> Self {
-        self.alternatives = val;
+    pub fn alternatives(mut self, generate_alternatives: bool) -> Self {
+        self.alternatives = generate_alternatives;
         self
     }
 
     /// Sets whether to include turn-by-turn navigation steps in the response.
-    pub fn steps(mut self, val: bool) -> Self {
-        self.steps = val;
+    pub fn steps(mut self, generate_steps: bool) -> Self {
+        self.steps = generate_steps;
         self
     }
 
     /// Sets whether to include per-segment annotations in the route.
-    pub fn annotations(mut self, val: bool) -> Self {
-        self.annotations = val;
+    pub fn annotations(mut self, include_annotations: bool) -> Self {
+        self.annotations = include_annotations;
         self
     }
 
     /// Sets the geometry encoding type for the route response.
-    pub fn geometry(mut self, val: GeometryType) -> Self {
-        self.geometry = val;
+    pub fn geometry(mut self, geometry_type: GeometryType) -> Self {
+        self.geometry = geometry_type;
         self
     }
 
     /// Sets the overview simplification level for the route.
-    pub fn overview(mut self, val: OverviewZoom) -> Self {
-        self.overview = val;
+    pub fn overview(mut self, overview_detail: OverviewZoom) -> Self {
+        self.overview = overview_detail;
         self
     }
 
     /// Sets whether the route should continue straight at waypoints where possible.
-    pub fn continue_straight(mut self, val: bool) -> Self {
-        self.continue_straight = val;
+    pub fn continue_straight(mut self, prefer_continue_straight: bool) -> Self {
+        self.continue_straight = prefer_continue_straight;
         self
     }
 
-    /// Sets per-point bearings to constrain the direction of travel.
+    /// Sets per-point bearings to constrain the direction snapping to
+    /// the node.
     ///
-    /// Each bearing must correspond to the point at the same index.
+    /// Each bearing must correspond to the point at the same index. Passing
+    /// None allows snapping in any direction.
     pub fn bearings(mut self, bearings: &'a [Option<Bearing>]) -> Self {
         self.bearings = Some(bearings);
         self
@@ -200,13 +220,17 @@ impl<'a> RouteRequestBuilder<'a> {
 
     /// Sets per-point search radiuses (in meters) for coordinate snapping.
     ///
-    /// Each radius must correspond to the point at the same index.
+    /// Each radius must correspond to the point at the same index. Radii must
+    /// be positive. Passing None corresponds to an infinite search radius.
     pub fn radiuses(mut self, coordinate_radiuses: &'a [Option<f64>]) -> Self {
         self.radiuses = Some(coordinate_radiuses);
         self
     }
 
-    /// Sets whether to include generated location hints in the response.
+    /// Sets per-point search radiuses (in meters) for coordinate snapping.
+    ///
+    /// Each radius must correspond to the point at the same index. Radii must
+    /// be positive. Passing None corresponds to an infinite search radius.
     pub fn generate_hints(mut self, generate_hints: bool) -> Self {
         self.generate_hints = generate_hints;
         self
@@ -214,7 +238,11 @@ impl<'a> RouteRequestBuilder<'a> {
 
     /// Sets precomputed location hints for faster coordinate matching.
     ///
-    /// Each hint corresponds to the point at the same index.
+    /// Each hint corresponds to the point at the same index. OSRM will
+    /// use the hint rather than the point information where supplied.
+    ///
+    /// Passing hints will result in radiuses, bearings,
+    /// approaches being ignored for that point.
     pub fn hints(mut self, coordinate_hints: &'a [Option<&'a str>]) -> Self {
         self.hints = Some(coordinate_hints);
         self
@@ -257,7 +285,7 @@ impl<'a> RouteRequestBuilder<'a> {
     /// - Fewer than two points were provided.
     /// - Array lengths do not match the number of points.
     /// - Exclude types mix transport modes.
-    pub fn build(self) -> Result<RouteRequest<'a>, RouteRequestError> {
+    pub fn build(&self) -> Result<RouteRequest<'a>, RouteRequestError> {
         if self.points.len() < 2 {
             return Err(RouteRequestError::InsufficientPoints);
         }
@@ -333,6 +361,8 @@ impl<'a> RouteRequestBuilder<'a> {
     }
 }
 
+/// The comprehensive error type returned when attempting to
+/// construct an invalid [`RouteRequest`].
 #[derive(Error, Debug)]
 pub enum RouteRequestError {
     #[error("Route requires at least 2 points")]
@@ -362,11 +392,6 @@ pub struct RouteResponse {
 }
 
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(
-    any(feature = "native", feature = "remote"),
-    derive(serde::Deserialize)
-)]
-#[allow(dead_code)]
 pub struct SimpleRouteResponse {
     pub code: String,
     pub durations: f64,

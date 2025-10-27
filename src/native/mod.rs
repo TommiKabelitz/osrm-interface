@@ -35,10 +35,11 @@
 //!
 
 mod osrm_engine;
-use crate::r#match::{Approach, MatchGapsBehaviour, MatchRequest};
+use crate::r#match::{MatchGapsBehaviour, MatchRequest};
 use crate::nearest::NearestRequest;
 use crate::request_types::{Bearing, Exclude, GeometryType, OverviewZoom, Snapping};
 use crate::route::RouteRequest;
+use crate::services::Approach;
 use crate::table::{TableAnnotation, TableFallbackCoordinate, TableRequest};
 use crate::trip::{TripDestination, TripRequest, TripSource};
 #[cfg_attr(doc, doc(cfg(feature = "native")))]

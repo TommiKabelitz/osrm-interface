@@ -7,8 +7,17 @@ use crate::{
     Point,
     osrm_response_types::{MatchRoute, MatchWaypoint},
     request_types::{Bearing, Exclude, GeometryType, OverviewZoom, Snapping},
+    services::{Approach, DimensionMismatch},
 };
 
+/// The request object passed to the match service. Constructed
+/// through [`MatchRequestBuilder::build`] which verifies the
+/// validity of the request.
+///
+/// See [`MatchRequestBuilder`] for more information on match requests.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
 #[derive(Clone)]
 #[cfg_attr(feature = "debug", derive(Debug))]
 pub struct MatchRequest<'a> {
@@ -31,30 +40,12 @@ pub struct MatchRequest<'a> {
     pub(crate) skip_waypoints: bool,
 }
 
-#[cfg_attr(feature = "debug", derive(Debug))]
-#[derive(Clone, Copy)]
-#[repr(C)]
-pub enum Approach {
-    Curb,
-    Opposite,
-    Unrestricted,
-}
-impl Approach {
-    pub fn url_form(&self) -> &'static str {
-        match self {
-            Self::Curb => "curb",
-            Self::Opposite => "opposite",
-            Self::Unrestricted => "unrestricted",
-        }
-    }
-}
-
 /// Helper struct for building a [`MatchRequest`].
 ///
 /// Set options using the struct methods before calling
-/// [`build`](Self::build). The `build` method attempts to
-/// check for invalid requests before the request is passed
-/// to the service
+/// [`build`](Self::build). The `build` method validates the configuration
+/// and attempts to detect invalid combinations before the request is sent
+/// to the service.
 ///
 /// ## Options:
 ///
@@ -62,7 +53,7 @@ impl Approach {
 ///   Must contain at least two points.
 ///
 /// - **`steps`** (*default:* `false`) — If `true`, includes turn-by-turn navigation
-///   instructions for each matched segment.
+///   instructions for each route leg.
 ///
 /// - **`geometry`** (*default:* `GeometryType::Polyline`) — Specifies the encoding
 ///   format for the returned geometry. See [`GeometryType`] for options.
@@ -187,27 +178,37 @@ impl<'a> MatchRequestBuilder<'a> {
         }
     }
 
-    /// Includes or omits step-by-step navigation instructions in the response.
-    pub fn steps(mut self, include_steps: bool) -> Self {
-        self.steps = include_steps;
+    /// Overwrite the points provided at construction of the builder. Useful
+    /// for reusing a builder with the same options.
+    ///
+    /// Take care that array-like options are still the same length as points,
+    /// [`build`](Self::build) will throw an error if not.
+    pub fn points(mut self, points: &'a [Point]) -> Self {
+        self.points = points;
         self
     }
 
-    /// Includes or omits metadata (distance, duration, etc.) for each segment.
+    /// Sets whether to include turn-by-turn navigation steps in the response.
+    pub fn steps(mut self, generate_steps: bool) -> Self {
+        self.steps = generate_steps;
+        self
+    }
+
+    /// Sets whether to include per-segment annotations in the route.
     pub fn annotations(mut self, include_annotations: bool) -> Self {
         self.annotations = include_annotations;
         self
     }
 
-    /// Sets the geometry encoding format used in the response.
+    /// Sets the geometry encoding type for the route response.
     pub fn geometry(mut self, geometry_type: GeometryType) -> Self {
         self.geometry = geometry_type;
         self
     }
 
-    /// Sets the overview simplification level for the returned route geometry.
-    pub fn overview(mut self, overview_zoom: OverviewZoom) -> Self {
-        self.overview = overview_zoom;
+    /// Sets the overview simplification level for the route.
+    pub fn overview(mut self, overview_detail: OverviewZoom) -> Self {
+        self.overview = overview_detail;
         self
     }
 
@@ -242,53 +243,52 @@ impl<'a> MatchRequestBuilder<'a> {
         self
     }
 
-    /// Specifies the allowed snapping direction for each point.
+    /// Sets per-point bearings to constrain the direction snapping to
+    /// the node.
     ///
-    /// Must have the same length as `points`.
-    /// Null values will allow snapping in all directions.
+    /// Each bearing must correspond to the point at the same index. Passing
+    /// None allows snapping in any direction.
     pub fn bearings(mut self, bearings: &'a [Option<Bearing>]) -> Self {
         self.bearings = Some(bearings);
         self
     }
 
-    /// Sets the search radius (in meters) for each coordinate.
+    /// Sets per-point search radiuses (in meters) for coordinate snapping.
     ///
-    /// Must have the same length as `points`.
-    /// Default radius is infinite.
+    /// Each radius must correspond to the point at the same index. Radii must
+    /// be positive. Passing None corresponds to an infinite search radius.
     pub fn radiuses(mut self, coordinate_radiuses: &'a [Option<f64>]) -> Self {
         self.radiuses = Some(coordinate_radiuses);
         self
     }
 
-    /// Enables or disables automatic hint generation.
-    ///
-    /// Hints can speed up subsequent queries for similar coordinates.
+    /// Sets whether to include generated location hints in the response.
     pub fn generate_hints(mut self, generate_hints: bool) -> Self {
         self.generate_hints = generate_hints;
         self
     }
 
-    /// Set pre-generated hints for each coordinate.
+    /// Sets precomputed location hints for faster coordinate matching.
     ///
-    /// Must have the same length as `points`.
-    /// Unspecified coordinates will be snapped.
+    /// Each hint corresponds to the point at the same index. OSRM will
+    /// use the hint rather than the point information where supplied.
+    ///
+    /// Passing hints will result in radiuses, bearings,
+    /// approaches being ignored for that point.
     pub fn hints(mut self, coordinate_hints: &'a [Option<&'a str>]) -> Self {
         self.hints = Some(coordinate_hints);
         self
     }
 
-    /// Specifies the approach direction for each coordinate.
-    ///
-    /// Must have the same length as `points`.
-    /// Default is `Approach::Unrestricted`.
+    /// Sets per-point approaches to control the side of the road to access from.
     pub fn approaches(mut self, approach_direction: &'a [Approach]) -> Self {
         self.approaches = Some(approach_direction);
         self
     }
 
-    /// Excludes specific road classes or transport modes from routing.
+    /// Sets which road classes should be excluded from route generation.
     ///
-    /// All entries must be of the same variant (e.g., all `Exclude::Car`).
+    /// All excludes must belong to the same transport mode.
     pub fn exclude(mut self, exclude: &'a [Exclude]) -> Self {
         self.exclude = Some(exclude);
         self
@@ -309,15 +309,15 @@ impl<'a> MatchRequestBuilder<'a> {
     /// Validates and constructs the [`MatchRequest`].
     ///
     /// Returns an error if configuration is invalid — for example:
-    /// - Too few points ([`MatchRequestError::TooFewPoints`])
-    /// - Mismatched array lengths ([`MatchRequestError::DimensionMismatch`])
-    /// - Missing timestamps when `gaps` = `Split` ([`MatchRequestError::TimestampsRequiredForSplitBehaviour`])
-    /// - Timestamps not sorted ([`MatchRequestError::TimestampsNotSorted`])
-    /// - Out-of-bounds waypoint indices ([`MatchRequestError::WaypointIndexOutOfBounds`])
-    /// - Mixed `Exclude` types ([`MatchRequestError::DifferentExcludeTypes`])
-    pub fn build(self) -> Result<MatchRequest<'a>, MatchRequestError> {
+    /// - Too few points
+    /// - Mismatched array lengths
+    /// - Missing timestamps when `gaps` = `Split`
+    /// - Timestamps not sorted
+    /// - Out-of-bounds waypoint indices
+    /// - Mixed `Exclude` types
+    pub fn build(&self) -> Result<MatchRequest<'a>, MatchRequestError> {
         if self.points.len() < 2 {
-            return Err(MatchRequestError::TooFewPoints);
+            return Err(MatchRequestError::InsufficientPoints);
         }
 
         if let Some(timestamps) = self.timestamps {
@@ -421,35 +421,45 @@ impl<'a> MatchRequestBuilder<'a> {
     }
 }
 
+/// The comprehensive error type returned when attempting to
+/// construct an invalid [`MatchRequest`].
 #[derive(Error, Debug)]
 pub enum MatchRequestError {
+    /// Match requires at least 2 points
     #[error("Match requires at least 2 points")]
-    TooFewPoints,
+    InsufficientPoints,
+    /// Mismatch of number of elements between points and one
+    /// of the array-like options.
     #[error("Mismatch of dimensions between Points and {0:?}")]
     DimensionMismatch(DimensionMismatch),
+    /// Timestamps must be in increasing order.
     #[error("Timestamps must be increasing order")]
     TimestampsNotSorted,
+    /// To use `GapsBehaviour::Split`, timestamps must be provided.
     #[error("Timestamps must be included for GapsBehaviour::Split")]
     TimestampsRequiredForSplitBehaviour,
+    /// If waypoints is specified as Some(), it may not be empty.
     #[error("Waypoints when non-None must have non-zero length")]
     EmptyWaypoints,
+    /// Waypoint values must be in bounds of the points array.
     #[error("Waypoints contain index {0} which is out of bounds for points with size {1}")]
     WaypointIndexOutOfBounds(usize, usize),
+    /// Cannot mix excludes of different [`Exclude`] variants.
     #[error("Exclude types are not all of the same type")]
     DifferentExcludeTypes,
+    /// Radius values must be non-negative.
     #[error("Radii must be non-negative")]
     NegativeRadius,
 }
 
-#[derive(Debug)]
-pub enum DimensionMismatch {
-    Timestamps,
-    Bearings,
-    Radiuses,
-    Hints,
-    Approaches,
-}
-
+/// If there are large gaps in the timestamps (>60s), allow
+/// the matching to be split into subsections around those
+/// large gaps.
+///
+/// `Ignore` must be used when timestamps are not specified.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
 #[derive(Clone, Copy)]
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[repr(C)]
@@ -458,6 +468,10 @@ pub enum MatchGapsBehaviour {
     Ignore = 1,
 }
 impl MatchGapsBehaviour {
+    /// Formats the variant as a lowercase &str. The form expected
+    /// by `osrm-routed`.
+    ///
+    /// eg. `"split"` or `"ignore"`
     pub fn url_form(&self) -> &'static str {
         match self {
             Self::Split => "split",

@@ -5,11 +5,19 @@ use thiserror::Error;
 
 use crate::{
     Point,
-    r#match::Approach,
     osrm_response_types::Waypoint,
     request_types::{Bearing, Exclude, Snapping},
+    services::Approach,
 };
 
+/// The request object passed to the nearest service. Constructed
+/// through [`NearestRequestBuilder::build`] which verifies the
+/// validity of the request.
+///
+/// See [`NearestRequestBuilder`] for more information on nearest requests.
+///
+/// Implements [`Debug`] if the `feature="debug"` feature flag
+/// is set.
 #[derive(Clone)]
 #[cfg_attr(feature = "debug", derive(Debug))]
 pub struct NearestRequest<'a> {
@@ -22,9 +30,55 @@ pub struct NearestRequest<'a> {
     pub(crate) snapping: Option<Snapping>,
 }
 
+/// Helper struct for building a [`NearestRequest`].
+///
+/// Set nearest options using the struct methods before calling
+/// [`build`](Self::build). The `build` method validates the configuration
+/// and attempts to detect invalid combinations before the request is sent
+/// to the service.
+///
+/// ## Options
+///
+/// - **`point`** (*required*) — The [`Point`] coordinate for which nearest
+///   road segments are queried.
+///
+/// - **`number`** (*required*) — The maximum number of nearest segments to return.
+///
+/// - **`bearing`** (*optional*) — A [`Bearing`] restricting the direction
+///   in which the coordinate may be snapped to a road segment.
+///
+/// - **`radius`** (*optional*) — A search radius (in meters) constraining how far
+///   OSRM may search from the input coordinate. If omitted, the search radius
+///   is unlimited.
+///
+/// - **`approach`** (*optional*) — The [`Approach`] side of the road from which
+///   to approach the coordinate (e.g., `Approach::Curb`, `Approach::Unrestricted`).
+///   The default is unrestricted access.
+///
+/// - **`exclude`** (*optional*) — A slice of [`Exclude`] values, all of the same
+///   transport mode (e.g., all `Exclude::Car` or all `Exclude::Bicycle`),
+///   specifying road classes to exclude from the search.
+///
+/// - **`snapping`** (*optional*) — Defines how the input coordinate is snapped to
+///   the road network. See [`Snapping`] for available modes.
+///
+/// ## Example
+///
+/// ```
+/// use osrm_interface::nearest::NearestRequestBuilder;
+///
+/// let point = Point::new(48.040437, 10.316550).expect("Invalid point");
+///
+/// let nearest_request = NearestRequestBuilder::new(&point, 3)
+///     .radius(50.0)
+///     // The actual node may be 20° either side of north of the given point
+///     .bearing(Bearing::new(0, 20))
+///     .build()
+///     .expect("Failed to build NearestRequest");
+/// ```
 pub struct NearestRequestBuilder<'a> {
-    pub point: &'a Point,
-    pub number: u64,
+    point: &'a Point,
+    number: u64,
     bearing: Option<Bearing>,
     radius: Option<f64>,
     approach: Option<Approach>,
@@ -33,6 +87,9 @@ pub struct NearestRequestBuilder<'a> {
 }
 
 impl<'a> NearestRequestBuilder<'a> {
+    /// Creates a new [`NearestRequestBuilder`] with default parameters.
+    ///
+    /// The builder can then be customized using its setter methods.
     pub fn new(point: &'a Point, number: u64) -> Self {
         Self {
             point,
@@ -44,31 +101,62 @@ impl<'a> NearestRequestBuilder<'a> {
             snapping: None,
         }
     }
+
+    /// Overwrite the point provided at construction of the builder. Useful
+    /// for reusing a builder with the same options.
+    pub fn point(mut self, point: &'a Point) -> Self {
+        self.point = point;
+        self
+    }
+
+    /// Sets the bearing to constrain the direction snapping to
+    /// the node.
     pub fn bearing(mut self, bearing: Bearing) -> Self {
         self.bearing = Some(bearing);
         self
     }
 
+    /// Sets the search radius (in meters) constraining how far OSRM may
+    /// search from the input coordinate.
+    ///
+    /// Radius must be positive. Passing None corresponds to an infinite
+    /// search radius.
     pub fn radius(mut self, coordinate_radius: f64) -> Self {
         self.radius = Some(coordinate_radius);
         self
     }
 
+    /// Sets the approach direction to control the side of the road
+    /// from which the coordinate is accessed.
     pub fn approach(mut self, approach_direction: Approach) -> Self {
         self.approach = Some(approach_direction);
         self
     }
+
+    /// Sets which road classes should be excluded from the nearest search.
+    ///
+    /// All excludes must belong to the same transport mode.
     pub fn exclude(mut self, exclude: &'a [Exclude]) -> Self {
         self.exclude = Some(exclude);
         self
     }
 
+    /// Sets the snapping behavior for the input coordinate.
     pub fn snapping(mut self, snapping: Snapping) -> Self {
         self.snapping = Some(snapping);
         self
     }
 
-    pub fn build(self) -> Result<NearestRequest<'a>, NearestRequestError> {
+    /// Builds a [`NearestRequest`] from the configured parameters.
+    ///
+    /// Performs validation to ensure all parameters are compatible.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`NearestRequestError`] if:
+    /// - Exclude types mix transport modes.
+    /// - Radius is negative.
+    pub fn build(&self) -> Result<NearestRequest<'a>, NearestRequestError> {
         #[allow(clippy::collapsible_if)]
         if let Some(exclude) = self.exclude {
             if !exclude.is_empty() {
@@ -100,11 +188,14 @@ impl<'a> NearestRequestBuilder<'a> {
     }
 }
 
+/// The comprehensive error type returned when attempting to
+/// construct an invalid [`NearestRequest`].
 #[derive(Error, Debug)]
 pub enum NearestRequestError {
     #[error("Exclude types are not all of the same type")]
     DifferentExcludeTypes,
-    #[error("Radius must be non-negative")]
+    /// Radius values must be non-negative.
+    #[error("Radii must be non-negative")]
     NegativeRadius,
 }
 
